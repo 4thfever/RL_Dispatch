@@ -1,5 +1,0 @@
-# giving case generation infomation
-CASE_NUM: 100
-LOAD_FLUCTUATION: True
-LOAD_FLUCTUATION_BOTTOM: 0.6
-LOAD_FLUCTUATION_TOP: 1.2
