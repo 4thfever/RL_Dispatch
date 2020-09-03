@@ -18,8 +18,8 @@ load_fluc = d['LOAD_FLUCTUATION']
 if load_fluc:
     load_fluc_bot = d['LOAD_FLUCTUATION_BOTTOM']
     load_fluc_top = d['LOAD_FLUCTUATION_TOP']
+    assert load_fluc_bot < load_fluc_top, "下限应当小于上限"
 net = pp.from_json(grid_path)
-
 
 # generating cases
 for num in range(d['CASE_NUM']):

@@ -41,7 +41,6 @@ def dqn_learing(
     q_func,
     optimizer_spec,
     exploration,
-    stopping_criterion=None,
     replay_buffer_size=1000000,
     batch_size=32,
     gamma=0.99,
@@ -73,9 +72,6 @@ def dqn_learing(
         for the optimizer
     exploration: Schedule (defined in utils.schedule)
         schedule for probability of chosing random action.
-    stopping_criterion: (env) -> bool
-        should return true when it's ok for the RL algorithm to stop.
-        takes in env and the number of steps executed so far.
     replay_buffer_size: int
         How many memories to store in the replay buffer.
     batch_size: int
@@ -139,7 +135,7 @@ def dqn_learing(
 
     for t in count():
         ### Check stopping criterion
-        if stopping_criterion is not None and stopping_criterion(env):
+        if env.stopping_criterion():
             break
 
         ### Step the env and store the transition
