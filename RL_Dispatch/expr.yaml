@@ -1,0 +1,3 @@
+# giving case generation infomation
+FOLDER: "data/14nodes"
+REWARD_BORDER: [0.8, 0.95, 1.05, 1.25]
