@@ -5,11 +5,10 @@ import os
 import pandapower as pp
 import yaml
 
-with open('../expr.yaml') as file:
+with open('../config.yaml') as file:
     d = yaml.load(file)
-    # reward_border = [0.8, 0.95, 1.05, 1.25]
-    reward_border = d["REWARD_BORDER"]
-    diverge_border = d["DIVERGE_BORDER"]
+    reward_border = d["reward_border"]
+    diverge_border = d["diverge_border"]
 
 class Wrapper(object):
     def __init__(self, folder):
@@ -56,10 +55,11 @@ class Wrapper(object):
     @staticmethod
     def extra_feature(obs_raw):
         # 把观测结果降维
-        pass
+        # 具体怎么降维留着之后再研究
+        obs = obs_raw
         return obs
 
-    def trans_action(self, action_out):
+    def trans_action(self, action_complex):
         # 把NN输出的action变换成pandapower能理解的形式
         pass
         return action

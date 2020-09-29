@@ -1,0 +1,83 @@
+# giving case generation infomation
+TrainLoader:
+  base_grid:
+    existed_in_pp: false
+    name: case14
+    grid_path: './data/base_grid/14nodes/node14.txt'
+
+  sample_construct:
+    # generate multiple initial power flow cases
+    - !caseDuplicator
+      input: '__base_grid__'
+      case_num: 2
+      output:
+        -
+          name: 'origin_cases'
+          fields: '__all__'
+    - !pfCaseInitializer
+      input: 'origin_cases'
+      case_transform:
+        -
+          name: fluctuation_abs
+          fluc_states: ['load:p_mw', 'load:q_mvar']
+          fluc_vals: [[-5. ,5.], [-2., 2.]]
+        -
+          name: fluctuation_rel
+          fluc_states: ['load:p_mw', 'load:q_mvar']
+          fluc_ratios: [[0.6, 1.2], [0.6, 1.2]]
+      output:
+        -
+          name: 'origin_cases_with_fluc'
+          fields: '__all__'
+    - !pfSolver
+      input: 'origin_cases_with_fluc'
+      output:
+        -
+          name: 'power_flow_cases_with_fluc'
+          fields: '__all__'
+
+    - !pfActionGenerator
+      input: 'origin_cases_with_fluc'
+      action_state: ['gen:vm_pu']
+      action_type: ['discrete']
+      action_enum: [[0.9, 0.95, 1.0, 1.05, 1.1]]
+      output:
+        -
+          name: 'gen_voltage_mag_action'
+          fields: '__all__'
+
+    - !pfActionExecutor
+      input: ['origin_cases_with_fluc', 'gen_voltage_mag_action']
+      output:
+        -
+          name: 'cases_after_'
+    #- !powerFlowSolver
+    #  input: 'origin_cases_with_fluc'
+    #  output:
+    #    -
+    #      name: 'power_flow_cases'
+    #      fields: '__all__'
+
+    #- !rewardCalculator
+      #
+
+  input_def:
+    fields: ['init_state', 'action', 'reward', 'next_state']
+
+
+# 实验用
+reward_border: [0.8, 0.95, 1.05, 1.25]
+diverge_border: [0.4, 2]
+total_step: 10000
+
+# Hyper parameter
+batch_size: 32
+gamma: 0.99
+replay_buffer_size: 1000000
+learning_starts: 50000
+learning_freq: 4
+frame_history_len: 4
+targer_update_freq: 10000
+learning_rate: 0.00025
+alpha: 0.95
+eps: 0.01

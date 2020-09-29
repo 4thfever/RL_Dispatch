@@ -5,14 +5,16 @@
 """
 from pp_wrapper import Wrapper
 import numpy as np
+import yaml
+
 class Env():
     def __init__(self, total_network_num=None):
         """
         和强化学习程序交互的接口
         """
-        with open('../expr.yaml') as file:
+        with open('../config.yaml') as file:
             d = yaml.load(file)
-            self.total_step = d["TOTAL_STEP"]
+            self.total_step = d["total_step"]
 
         self.network_num = 0
         self.step = 0

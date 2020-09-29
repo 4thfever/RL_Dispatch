@@ -1,4 +1,5 @@
 import gym
+import yaml
 import torch.optim as optim
 
 from dqn_model import DQN
@@ -6,19 +7,20 @@ from dqn_learn import OptimizerSpec, dqn_learing
 from utils.gym import get_env, get_wrapper_by_name
 from utils.schedule import LinearSchedule
 
-BATCH_SIZE = 32
-GAMMA = 0.99
-REPLAY_BUFFER_SIZE = 1000000
-LEARNING_STARTS = 50000
-LEARNING_FREQ = 4
-FRAME_HISTORY_LEN = 4
-TARGER_UPDATE_FREQ = 10000
-LEARNING_RATE = 0.00025
-ALPHA = 0.95
-EPS = 0.01
+with open('../config.yaml') as file:
+    d = yaml.load(file)
+    BATCH_SIZE = d["batch_size"]
+    GAMMA = d["gamma"]
+    REPLAY_BUFFER_SIZE = d["replay_buffer_size"]
+    LEARNING_STARTS = d["learning_starts"]
+    LEARNING_FREQ = d["learning_freq"]
+    FRAME_HISTORY_LEN = d["frame_history_len"]
+    TARGER_UPDATE_FREQ = d["targer_update_freq"]
+    LEARNING_RATE = d["learning_rate"]
+    ALPHA = d["alpha"]
+    EPS = d["eps"]
 
 def main(env):
-
     optimizer_spec = OptimizerSpec(
         constructor=optim.RMSprop,
         kwargs=dict(lr=LEARNING_RATE, alpha=ALPHA, eps=EPS),
