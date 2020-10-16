@@ -14,6 +14,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.autograd as autograd
+import matplotlib.pyplot as plt
 
 from lib.utils.replay_buffer import ReplayBuffer
 
@@ -167,7 +168,7 @@ def dqn_learing(
         # Advance one step
         obs, reward, done = env.step(action)
         # clip rewards between -1 and 1
-        reward = max(-1.0, min(reward, 1.0))
+        # reward = max(-1.0, min(reward, 1.0))
         # Store other info in replay memory
         replay_buffer.store_effect(last_idx, action.squeeze(), reward, done)
         # Resets the environment when reaching an episode boundary.
@@ -187,6 +188,7 @@ def dqn_learing(
             # in which case there is no Q-value at the next state; at the end of an
             # episode, only the current state reward contributes to the target
             obs_batch, act_batch, rew_batch, next_obs_batch, done_mask = replay_buffer.sample(batch_size)
+            # print(rew_batch)
             # Convert numpy nd_array to torch variables for calculation
             obs_batch = torch.from_numpy(obs_batch).type(dtype)
             act_batch = torch.from_numpy(act_batch).int()
@@ -233,6 +235,10 @@ def dqn_learing(
             # Periodically update the target network by Q network to target Q network
             if num_param_updates % target_update_freq == 0:
                 target_Q.load_state_dict(Q.state_dict())
+
+    print(replay_buffer.reward)
+    plt.plot(replay_buffer.reward)
+    plt.show()
 
         # ### 4. Log progress and keep track of statistics
         # episode_rewards = get_wrapper_by_name(env, "Monitor").get_episode_rewards()

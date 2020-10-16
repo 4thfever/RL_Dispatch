@@ -20,6 +20,7 @@ class Wrapper():
             self.observer = d["observer"]
             self.observe_attribute = d["observe_attribute"]
             self.max_step = d["max_step"]
+            self.reward_value = d["reward_value"]
 
         self.folder = folder
         self.net = None
@@ -45,19 +46,21 @@ class Wrapper():
         若有一个bus在最坏区间，那么reward就是最差
         输入的应当是标幺值
         '''
-        reward = 100
+        rew_bad, rew_normal, rew_best = self.reward_value
+        reward = rew_best
         for ele in obs:
+            # print(ele)
             if ele < self.rb[0] or ele > self.rb[-1]:
-                reward = -100
+                reward = rew_bad
                 break
             if (((ele > self.rb[0]) and (ele < self.rb[1])) or 
                 ((ele < self.rb[-1]) and (ele > self.rb[-2]))):
-                reward = -50
+                reward = rew_normal
         return reward
 
     def extract_obs(self):
         # 从网络中提取观测值（如必要，压缩）
-        obs_raw = self.net[self.observer][self.observe_attribute]
+        obs_raw = self.net[self.observer][self.observe_attribute].values
         return obs_raw
 
     def trans_action(self, action_raw):

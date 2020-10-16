@@ -19,7 +19,6 @@ class Env():
         with open('config.yaml') as file:
             d = yaml.load(file)
             # self.total_step = d["total_step"]
-            self.total_step = 10000
             self.folder = d["folder"]
 
         self.idx_network = 0
@@ -37,9 +36,7 @@ class Env():
         执行下一步调度过程，并输出各项信息
         """
         obs = self.wrapper.extract_obs()
-        print(action)
         action = self.wrapper.trans_action(action)
-        print(action)
         self.wrapper.input_action(action)
         self.wrapper.run_network()
         obs = self.wrapper.extract_obs()

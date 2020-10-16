@@ -27,9 +27,6 @@ class ReplayBuffer(object):
               time)
             - store frame_t and frame_(t+1) in the same buffer.
 
-        For the typical use case in Atari Deep RL buffer with 1M frames the total
-        memory footprint of this buffer is 10^6 * 84 * 84 bytes ~= 7 gigabytes
-
         Parameters
         ----------
         size: int
@@ -110,10 +107,10 @@ class ReplayBuffer(object):
         """
 
         if self.obs is None:
-            self.obs      = np.empty([self.size, self.num_observer], dtype=np.float32)
-            self.action   = np.empty([self.size, self.num_actor, self.num_action], dtype=np.int32)
-            self.reward   = np.empty([self.size], dtype=np.float32)
-            self.done     = np.empty([self.size], dtype=np.bool)
+            self.obs      = np.zeros([self.size, self.num_observer], dtype=np.float32)
+            self.action   = np.zeros([self.size, self.num_actor, self.num_action], dtype=np.int32)
+            self.reward   = np.zeros([self.size], dtype=np.float32)
+            self.done     = np.zeros([self.size], dtype=np.bool)
 
         self.obs[self.next_idx] = input_obs
 
