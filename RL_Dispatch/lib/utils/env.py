@@ -18,7 +18,7 @@ class Env():
         """
         with open('config.yaml') as file:
             d = yaml.load(file)
-            # self.total_step = d["total_step"]
+            self.total_step = d["total_step"]
             self.folder = d["folder"]
 
         self.idx_network = 0
