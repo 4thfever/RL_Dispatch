@@ -37,7 +37,9 @@ class Env():
         执行下一步调度过程，并输出各项信息
         """
         obs = self.wrapper.extract_obs()
+        print(action)
         action = self.wrapper.trans_action(action)
+        print(action)
         self.wrapper.input_action(action)
         self.wrapper.run_network()
         obs = self.wrapper.extract_obs()

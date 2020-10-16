@@ -74,7 +74,7 @@ class Wrapper():
         判断这个net是否已经结束
         已经最优化或者崩溃了
         '''
-        # print(self.calcu_reward(obs), self.is_diverged, self.step)
+        # print(obs, self.is_diverged, self.step)
         done_mask = ((self.calcu_reward(obs) == 100) or 
                     self.is_diverged or 
                     self.exceed_max_step())

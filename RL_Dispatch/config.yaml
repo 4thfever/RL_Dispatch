@@ -74,10 +74,13 @@ folder: "data/14nodes"
 # Hyper parameter
 batch_size: 32
 gamma: 0.99
-replay_buffer_size: 1000000
-learning_starts: 50000
+# replay_buffer_size: 1000000
+replay_buffer_size: 10000
+# learning_starts: 50000
+learning_starts: 1000
 learning_freq: 4
-target_update_freq: 10000
+# target_update_freq: 10000
+target_update_freq: 100
 learning_rate: 0.00025
 alpha: 0.95
 eps: 0.01
