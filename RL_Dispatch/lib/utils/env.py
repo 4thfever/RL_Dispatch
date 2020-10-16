@@ -12,38 +12,40 @@ import yaml
 from .pp_wrapper import Wrapper
 
 class Env():
-    def __init__(self, total_network_num=None):
+    def __init__(self, num_total_network=None):
         """
         和强化学习程序交互的接口
         """
         with open('config.yaml') as file:
             d = yaml.load(file)
-            self.total_step = d["total_step"]
+            # self.total_step = d["total_step"]
             self.total_step = 10000
             self.folder = d["folder"]
 
-        self.network_num = 0
+        self.idx_network = 0
         self.num_step = 0
-        self.total_network_num = total_network_num
+        self.num_total_network = num_total_network
         self.stop_expr = False
         # pandapower wrapper
         self.wrapper = Wrapper(self.folder)
-        self.wrapper.load_network(self.network_num)
-        if not total_network_num:
-            self.total_network_num = self.wrapper.count_network_num()
+        self.wrapper.load_network(self.idx_network)
+        if not num_total_network:
+            self.num_total_network = self.wrapper.count_network_num()
 
     def step(self, action):
         """
         执行下一步调度过程，并输出各项信息
         """
+        obs = self.wrapper.extract_obs()
         action = self.wrapper.trans_action(action)
-        obs = self.wrapper.extract_obs()
         self.wrapper.input_action(action)
-        self.wrapper.run_network(obs)
+        self.wrapper.run_network()
         obs = self.wrapper.extract_obs()
+        self.wrapper.check_diverge(obs)
         reward = self.wrapper.calcu_reward(obs)
         obs = self.wrapper.extra_feature(obs)
         done = self.wrapper.is_done(obs)
+        self.wrapper.step += 1
         return obs, reward, done
 
     def reset(self):
@@ -51,8 +53,10 @@ class Env():
         在某个网络的调度过程结束（稳定或者解列）的前提下，
         进入下一个网络。
         """
-        self.network_num += 1
-        self.wrapper.load_network(self.network_num)
+        self.idx_network += 1
+        if self.idx_network >= self.num_total_network:
+            self.idx_network = 0
+        self.wrapper.load_network(self.idx_network)
         obs = self.wrapper.extract_obs()
         return obs
 

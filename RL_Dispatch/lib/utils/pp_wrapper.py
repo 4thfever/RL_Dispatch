@@ -19,10 +19,12 @@ class Wrapper():
             self.action_attribute = d["action_attribute"]
             self.observer = d["observer"]
             self.observe_attribute = d["observe_attribute"]
+            self.max_step = d["max_step"]
 
         self.folder = folder
         self.net = None
         self.is_diverged = False
+        self.step = 0
 
         
     def count_network_num(self):
@@ -33,8 +35,8 @@ class Wrapper():
     def load_network(self, num):
         self.net = pp.from_json(self.folder + '/' + os.listdir(self.folder)[num])
         self.is_diverged = False
-        obs = self.extract_obs()
-        self.run_network(obs)
+        self.step = 0
+        self.run_network()
 
     def calcu_reward(self, obs):
         '''
@@ -60,9 +62,7 @@ class Wrapper():
 
     def trans_action(self, action_raw):
         # 把NN输出的action变换成pandapower能理解的形式
-        
         action = [self.action_enum[np.argmax(sublist)] for sublist in action_raw]
-        # print(action_raw, action)
         return action
 
     def input_action(self, action):
@@ -74,20 +74,24 @@ class Wrapper():
         判断这个net是否已经结束
         已经最优化或者崩溃了
         '''
-        done_mask = (self.calcu_reward(obs) == 100) or self.is_diverged
+        # print(self.calcu_reward(obs), self.is_diverged, self.step)
+        done_mask = ((self.calcu_reward(obs) == 100) or 
+                    self.is_diverged or 
+                    self.exceed_max_step())
         return done_mask
+
+    # 每个网络最多的调度步数
+    def exceed_max_step(self):
+        return self.step > self.max_step
 
     def check_diverge(self, obs):
         # 输入的应当是标幺值
         for ele in obs:
             if ele < self.db[0] or ele > self.db[1]:
-                return True
-        return False
+                self.is_diverged = True
 
-    def run_network(self, obs):
+    def run_network(self):
         pp.runpp(self.net)
-        if self.check_diverge(obs):
-            self.is_diverged = True
 
     @staticmethod
     def extra_feature(obs_raw):

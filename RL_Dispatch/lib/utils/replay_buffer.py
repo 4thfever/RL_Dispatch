@@ -16,7 +16,7 @@ def sample_n_unique(sampling_f, n):
     return res
 
 class ReplayBuffer(object):
-    def __init__(self, size, frame_history_len, num_actor, num_action, num_observer):
+    def __init__(self, size, num_actor, num_action, num_observer):
         """This is a memory efficient implementation of the replay buffer.
 
         The sepecific memory optimizations use here are:
@@ -30,20 +30,13 @@ class ReplayBuffer(object):
         For the typical use case in Atari Deep RL buffer with 1M frames the total
         memory footprint of this buffer is 10^6 * 84 * 84 bytes ~= 7 gigabytes
 
-        Warning! Assumes that returning frame of zeros at the beginning
-        of the episode, when there is less frames than `frame_history_len`,
-        is acceptable.
-
         Parameters
         ----------
         size: int
             Max number of transitions to store in the buffer. When the buffer
             overflows the old memories are dropped.
-        frame_history_len: int
-            Number of memories to be retried for each observation.
         """
         self.size = size
-        self.frame_history_len = frame_history_len
         self.num_actor = num_actor
         self.num_action = num_action
         self.num_observer = num_observer
@@ -61,10 +54,10 @@ class ReplayBuffer(object):
         return batch_size + 1 <= self.num_in_buffer
 
     def _encode_sample(self, idxes):
-        obs_batch      = np.concatenate([self._encode_observation(idx)[np.newaxis, :] for idx in idxes], 0)
+        obs_batch      = self.obs[idxes]
         act_batch      = self.action[idxes]
         rew_batch      = self.reward[idxes]
-        next_obs_batch = np.concatenate([self._encode_observation(idx + 1)[np.newaxis, :] for idx in idxes], 0)
+        next_obs_batch = self.obs[[idx +1 for idx in idxes]]
         done_mask      = np.array([1.0 if self.done[idx] else 0.0 for idx in idxes], dtype=np.float32)
 
         return obs_batch, act_batch, rew_batch, next_obs_batch, done_mask
@@ -89,17 +82,12 @@ class ReplayBuffer(object):
         Returns
         -------
         obs_batch: np.array
-            Array of shape
-            (batch_size, img_c * frame_history_len, img_h, img_w)
-            and dtype np.uint8
+
         act_batch: np.array
             Array of shape (batch_size,) and dtype np.int32
         rew_batch: np.array
             Array of shape (batch_size,) and dtype np.float32
         next_obs_batch: np.array
-            Array of shape
-            (batch_size, img_c * frame_history_len, img_h, img_w)
-            and dtype np.uint8
         done_mask: np.array
             Array of shape (batch_size,) and dtype np.float32
         """
@@ -108,45 +96,8 @@ class ReplayBuffer(object):
         return self._encode_sample(idxes)
 
     def encode_recent_observation(self):
-        """Return the most recent `frame_history_len` frames.
-
-        Returns
-        -------
-        observation: np.array
-            Array of shape (img_h, img_w, img_c * frame_history_len)
-            and dtype np.uint8, where observation[:, :, i*img_c:(i+1)*img_c]
-            encodes frame at time `t - frame_history_len + i`
-        """
         assert self.num_in_buffer > 0
-        return self._encode_observation((self.next_idx - 1) % self.size)
-
-    def _encode_observation(self, idx):
-        end_idx   = idx + 1 # make noninclusive
-        start_idx = end_idx - self.frame_history_len
-
-        # this checks if we are using low-dimensional observations, such as RAM
-        # state, in which case we just directly return the latest RAM.
-        if len(self.obs.shape) == 2:
-            return self.obs[end_idx-1]
-
-        # if there weren't enough frames ever in the buffer for context
-        if start_idx < 0 and self.num_in_buffer != self.size:
-            start_idx = 0
-        for idx in range(start_idx, end_idx - 1):
-            if self.done[idx % self.size]:
-                start_idx = idx + 1
-        missing_context = self.frame_history_len - (end_idx - start_idx)
-        # if zero padding is needed for missing context
-        # or we are on the boundry of the buffer
-        if start_idx < 0 or missing_context > 0:
-            frames = [np.zeros_like(self.obs[0]) for _ in range(missing_context)]
-            for idx in range(start_idx, end_idx):
-                frames.append(self.obs[idx % self.size])
-            return np.concatenate(frames, 0)
-        else:
-            # this optimization has potential to saves about 30% compute time \o/
-            img_h, img_w = self.obs.shape[2], self.obs.shape[3]
-            return self.obs[start_idx:end_idx].reshape(-1, img_h, img_w)
+        return self.obs[(self.next_idx - 1) % self.size]
 
     def store_obs(self, input_obs):
         """Store a single observation in the buffer at the next available index, overwriting

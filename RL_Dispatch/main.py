@@ -14,7 +14,6 @@ with open('config.yaml') as file:
     replay_buffer_size = d["replay_buffer_size"]
     learning_starts = d["learning_starts"]
     learning_freq = d["learning_freq"]
-    frame_history_len = d["frame_history_len"]
     target_update_freq = d["target_update_freq"]
     learning_rate = d["learning_rate"]
     alpha = d["alpha"]
@@ -44,7 +43,6 @@ def main(env):
         learning_starts=1000,
         # learning_starts=learning_starts,
         learning_freq=learning_freq,
-        frame_history_len=frame_history_len,
         target_update_freq=100,
         # target_update_freq=targer_update_freq,
         num_actor = num_actor,

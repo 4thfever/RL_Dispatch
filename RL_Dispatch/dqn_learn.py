@@ -48,7 +48,6 @@ def dqn_learing(
     gamma,
     learning_starts,
     learning_freq,
-    frame_history_len,
     target_update_freq,
     num_actor,
     action_enum,
@@ -88,8 +87,6 @@ def dqn_learing(
         After how many environment steps to start replaying experiences
     learning_freq: int
         How many steps of environment to take between every experience replay
-    frame_history_len: int
-        How many past frames to include as input to the model.
     target_update_freq: int
         How many experience replay rounds (not steps!) to perform between
         each update to the target Q network
@@ -130,7 +127,6 @@ def dqn_learing(
     # Construct the replay buffer
     replay_buffer = ReplayBuffer(
                                 replay_buffer_size, 
-                                frame_history_len,
                                 num_actor,
                                 len(action_enum),
                                 num_observer

@@ -77,7 +77,6 @@ gamma: 0.99
 replay_buffer_size: 1000000
 learning_starts: 50000
 learning_freq: 4
-frame_history_len: 4
 target_update_freq: 10000
 learning_rate: 0.00025
 alpha: 0.95
@@ -91,3 +90,5 @@ action_enum: [0.95, 0.975, 1, 1.025, 1.05]
 num_observer: 14
 observer: res_bus
 observe_attribute: vm_pu
+
+max_step: 5
