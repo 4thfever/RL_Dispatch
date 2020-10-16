@@ -16,7 +16,7 @@ def sample_n_unique(sampling_f, n):
     return res
 
 class ReplayBuffer(object):
-    def __init__(self, size, frame_history_len):
+    def __init__(self, size, frame_history_len, num_actor, num_action, num_observer):
         """This is a memory efficient implementation of the replay buffer.
 
         The sepecific memory optimizations use here are:
@@ -44,6 +44,9 @@ class ReplayBuffer(object):
         """
         self.size = size
         self.frame_history_len = frame_history_len
+        self.num_actor = num_actor
+        self.num_action = num_action
+        self.num_observer = num_observer
 
         self.next_idx      = 0
         self.num_in_buffer = 0
@@ -120,10 +123,12 @@ class ReplayBuffer(object):
     def _encode_observation(self, idx):
         end_idx   = idx + 1 # make noninclusive
         start_idx = end_idx - self.frame_history_len
+
         # this checks if we are using low-dimensional observations, such as RAM
         # state, in which case we just directly return the latest RAM.
         if len(self.obs.shape) == 2:
             return self.obs[end_idx-1]
+
         # if there weren't enough frames ever in the buffer for context
         if start_idx < 0 and self.num_in_buffer != self.size:
             start_idx = 0
@@ -143,32 +148,23 @@ class ReplayBuffer(object):
             img_h, img_w = self.obs.shape[2], self.obs.shape[3]
             return self.obs[start_idx:end_idx].reshape(-1, img_h, img_w)
 
-    def store_frame(self, frame):
-        """Store a single frame in the buffer at the next available index, overwriting
+    def store_obs(self, input_obs):
+        """Store a single observation in the buffer at the next available index, overwriting
         old frames if necessary.
 
-        Parameters
-        ----------
-        frame: np.array
-            Array of shape (img_h, img_w, img_c) and dtype np.uint8
-            and the frame will transpose to shape (img_h, img_w, img_c) to be stored
         Returns
         -------
         idx: int
             Index at which the frame is stored. To be used for `store_effect` later.
         """
-        # make sure we are not using low-dimensional observations, such as RAM
-        if len(frame.shape) > 1:
-            # transpose image frame into (img_c, img_h, img_w)
-            frame = frame.transpose(2, 0, 1)
 
         if self.obs is None:
-            self.obs      = np.empty([self.size] + list(frame.shape), dtype=np.uint8)
-            self.action   = np.empty([self.size],                     dtype=np.int32)
-            self.reward   = np.empty([self.size],                     dtype=np.float32)
-            self.done     = np.empty([self.size],                     dtype=np.bool)
+            self.obs      = np.empty([self.size, self.num_observer], dtype=np.float32)
+            self.action   = np.empty([self.size, self.num_actor, self.num_action], dtype=np.int32)
+            self.reward   = np.empty([self.size], dtype=np.float32)
+            self.done     = np.empty([self.size], dtype=np.bool)
 
-        self.obs[self.next_idx] = frame
+        self.obs[self.next_idx] = input_obs
 
         ret = self.next_idx
         self.next_idx = (self.next_idx + 1) % self.size
