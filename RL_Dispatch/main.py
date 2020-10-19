@@ -1,27 +1,11 @@
-import yaml
 import torch.optim as optim
+import yaml
 
-from dqn_model import DQN
-from dqn_learn import OptimizerSpec, dqn_learing
-from lib.utils.pp_wrapper import Wrapper
-from lib.utils.env import Env
-from lib.utils.schedule import LinearSchedule
-
-with open('config.yaml') as file:
-    d = yaml.load(file)
-    batch_size = d["batch_size"]
-    gamma = d["gamma"]
-    replay_buffer_size = d["replay_buffer_size"]
-    learning_starts = d["learning_starts"]
-    learning_freq = d["learning_freq"]
-    target_update_freq = d["target_update_freq"]
-    learning_rate = d["learning_rate"]
-    alpha = d["alpha"]
-    eps = d["eps"]
-    num_actor = d["num_actor"]
-    action_enum = d["action_enum"]
-    num_observer = d["num_observer"]
-    observe_attribute = d["observe_attribute"]
+from packages.dqn_model import DQN
+from packages.dqn_learn import OptimizerSpec, dqn_learing
+from packages.lib.utils.pp_wrapper import Wrapper
+from packages.lib.utils.env import Env
+from packages.lib.utils.schedule import LinearSchedule
 
 def main(env):
     optimizer_spec = OptimizerSpec(
@@ -29,26 +13,26 @@ def main(env):
         kwargs=dict(lr=learning_rate, alpha=alpha, eps=eps),
     )
 
-    exploration_schedule = LinearSchedule(1000000, 0.1)
+    if d["schedule_type"] == "linear":
+        schedule_timesteps = d["schedule_timesteps"]
+        final_p = d["final_p"]
+        exploration_schedule = LinearSchedule(schedule_timesteps, final_p)
 
     dqn_learing(
         env=env,
         q_func=DQN,
         optimizer_spec=optimizer_spec,
         exploration=exploration_schedule,
-        replay_buffer_size=replay_buffer_size,
-        batch_size=batch_size,
-        gamma=gamma,
-        learning_starts=learning_starts,
-        learning_freq=learning_freq,
-        target_update_freq=target_update_freq,
-        num_actor = num_actor,
-        action_enum = action_enum,
-        num_observer = num_observer,
-        observe_attribute = observe_attribute,
+        d=d,
     )
+
+with open('config.yaml') as file:
+    d = yaml.load(file)
+    learning_rate = d["learning_rate"]
+    alpha = d["alpha"]
+    eps = d["eps"]
 
 if __name__ == '__main__':
     seed = 0 # 需要随机数吗?
-    env = Env()
+    env = Env(d)
     main(env)

@@ -5,22 +5,19 @@ import os
 
 import numpy as np
 import pandapower as pp
-import yaml
 
 
 class Wrapper():
-    def __init__(self, folder):
-        with open('config.yaml') as file:
-            d = yaml.load(file)
-            self.rb = d["reward_border"]
-            self.db = d["diverge_border"]
-            self.actor = d["actor"]
-            self.action_enum = d["action_enum"]
-            self.action_attribute = d["action_attribute"]
-            self.observer = d["observer"]
-            self.observe_attribute = d["observe_attribute"]
-            self.max_step = d["max_step"]
-            self.reward_value = d["reward_value"]
+    def __init__(self, folder, d):
+        self.rb = d["reward_border"]
+        self.db = d["diverge_border"]
+        self.actor = d["actor"]
+        self.action_enum = d["action_enum"]
+        self.action_attribute = d["action_attribute"]
+        self.observer = d["observer"]
+        self.observe_attribute = d["observe_attribute"]
+        self.max_step = d["max_step"]
+        self.reward_value = d["reward_value"]
 
         self.folder = folder
         self.net = None
@@ -85,7 +82,7 @@ class Wrapper():
 
     # 每个网络最多的调度步数
     def exceed_max_step(self):
-        return self.step > self.max_step
+        return self.step >= self.max_step
 
     def check_diverge(self, obs):
         # 输入的应当是标幺值

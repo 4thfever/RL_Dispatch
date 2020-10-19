@@ -16,7 +16,7 @@ def sample_n_unique(sampling_f, n):
     return res
 
 class ReplayBuffer(object):
-    def __init__(self, size, num_actor, num_action, num_observer):
+    def __init__(self, size, num_actor, num_action, num_observation):
         """This is a memory efficient implementation of the replay buffer.
 
         The sepecific memory optimizations use here are:
@@ -36,7 +36,7 @@ class ReplayBuffer(object):
         self.size = size
         self.num_actor = num_actor
         self.num_action = num_action
-        self.num_observer = num_observer
+        self.num_observation = num_observation
 
         self.next_idx      = 0
         self.num_in_buffer = 0
@@ -107,7 +107,7 @@ class ReplayBuffer(object):
         """
 
         if self.obs is None:
-            self.obs      = np.zeros([self.size, self.num_observer], dtype=np.float32)
+            self.obs      = np.zeros([self.size, self.num_observation], dtype=np.float32)
             self.action   = np.zeros([self.size, self.num_actor, self.num_action], dtype=np.int32)
             self.reward   = np.zeros([self.size], dtype=np.float32)
             self.done     = np.zeros([self.size], dtype=np.bool)

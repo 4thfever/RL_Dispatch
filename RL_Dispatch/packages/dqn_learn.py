@@ -16,7 +16,9 @@ import torch.nn.functional as F
 import torch.autograd as autograd
 import matplotlib.pyplot as plt
 
-from lib.utils.replay_buffer import ReplayBuffer
+from .lib.utils.replay_buffer import ReplayBuffer
+
+
 
 USE_CUDA = torch.cuda.is_available()
 dtype = torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTensor
@@ -34,26 +36,13 @@ class Variable(autograd.Variable):
 """
 OptimizerSpec = namedtuple("OptimizerSpec", ["constructor", "kwargs"])
 
-Statistic = {
-    "mean_episode_rewards": [],
-    "best_mean_episode_rewards": []
-}
 
 def dqn_learing(
     env,
     q_func,
     optimizer_spec,
     exploration,
-    replay_buffer_size,
-    batch_size,
-    gamma,
-    learning_starts,
-    learning_freq,
-    target_update_freq,
-    num_actor,
-    action_enum,
-    num_observer,
-    observe_attribute,
+    d,
     ):
 
     """Run Deep Q-learning algorithm.
@@ -96,12 +85,22 @@ def dqn_learing(
     ###############
     # BUILD MODEL #
     ###############
+    batch_size = d["batch_size"]
+    gamma = d["gamma"]
+    replay_buffer_size = d["replay_buffer_size"]
+    learning_starts = d["learning_starts"]
+    learning_freq = d["learning_freq"]
+    target_update_freq = d["target_update_freq"]
+    num_actor = d["num_actor"]
+    action_enum = d["action_enum"]
+    num_observer = d["num_observer"]
+    observe_attribute = d["observe_attribute"]
+    num_layer = d["num_layer"]
+    layer_size = d["layer_size"]
+    log_every_n_steps = d["log_every_n_steps"]
 
     # 这里×1是因为只观测一个属性
-    num_observe = num_observer * 1
-    num_action = action_enum
-    array_action = [num_actor, len(action_enum)]
-
+    num_observation = num_observer * 1
 
     # Construct an epilson greedy policy with given exploration schedule
     def select_epilson_greedy_action(model, obs, t):
@@ -113,24 +112,29 @@ def dqn_learing(
                 # 这里不记录梯度信息
                 # 这是因为之后会在batch的阶段重新计算
                 output = model(obs).data
-            action_buffer = env.onehot_encode(output.max(1)[1].cpu())
+            action_buffer = env.onehot_encode(output.max(1)[1].cpu(), len(action_enum))
         else:
             action_buffer = env.rand_action(num_actor, len(action_enum))
         return action_buffer
 
     # Initialize target q function and q function
-    Q = q_func(num_observe, array_action, num_actor).type(dtype)
-    target_Q = q_func(num_observe, array_action, num_actor).type(dtype)
+    Q = q_func(num_observation, len(action_enum), num_actor, num_layer, layer_size).type(dtype)
+    target_Q = q_func(num_observation, len(action_enum), num_actor, num_layer, layer_size).type(dtype)
 
     # Construct Q network optimizer function
     optimizer = optimizer_spec.constructor(Q.parameters(), **optimizer_spec.kwargs)
+
+    # log info
+    best_mean_episode_reward = -1000
+    cols = ["Timestep", "Episode", "Reward", "Exploration"]
+    df_res = pd.DataFrame(columns=cols)
 
     # Construct the replay buffer
     replay_buffer = ReplayBuffer(
                                 replay_buffer_size, 
                                 num_actor,
                                 len(action_enum),
-                                num_observer
+                                num_observation
                                 )
 
     ###############
@@ -139,13 +143,10 @@ def dqn_learing(
     num_param_updates = 0
     mean_episode_reward = -float('nan')
     best_mean_episode_reward = -float('inf')
-    last_obs = env.reset()
-    LOG_EVERY_N_STEPS = 10000
+    last_obs = env.initial_run()
 
     for t in count():
         env.num_step = t
-        if t % 500 == 0:
-            print(t)
 
         ### Check stopping criterion
         if env.stopping_criterion():
@@ -167,8 +168,6 @@ def dqn_learing(
             action = env.rand_action(num_actor, len(action_enum))
         # Advance one step
         obs, reward, done = env.step(action)
-        # clip rewards between -1 and 1
-        # reward = max(-1.0, min(reward, 1.0))
         # Store other info in replay memory
         replay_buffer.store_effect(last_idx, action.squeeze(), reward, done)
         # Resets the environment when reaching an episode boundary.
@@ -236,29 +235,29 @@ def dqn_learing(
             if num_param_updates % target_update_freq == 0:
                 target_Q.load_state_dict(Q.state_dict())
 
-    print(replay_buffer.reward)
-    plt.plot(replay_buffer.reward)
+
+        ### 4. Log progress and keep track of statistics
+        if t > learning_starts:
+            exploration_value = exploration.value(t)
+        else:
+            exploration_value = 'None'
+        df_res.loc[t, :] = [t, env.num_episode, replay_buffer.reward[t], exploration_value]
+
+        if t % log_every_n_steps == 0:
+            # 输出信息
+            print("Timestep: %d" % (t,))
+            print("Episodes: %d" % env.num_episode)
+            if t > learning_starts:
+                mean_steps_per_episode, mean_episode_reward = env.cal_epi_reward(df_res, env.num_episode)
+                best_mean_episode_reward = max(best_mean_episode_reward, mean_episode_reward)
+                print("Mean reward (100 episodes): %f" % mean_episode_reward)
+                print("Best mean reward: %f" % best_mean_episode_reward)
+                print("Exploration: %f" % exploration_value)
+            print("\n")
+
+    # 结束
+    df_res.to_csv("res.csv", index=False)
+    epi_x = list(range(100, df_res.iloc[-1]["Episode"]))
+    epi_reward = [env.cal_epi_reward(df_res, ele)[1] for ele in epi_x]
+    plt.plot(epi_x, epi_reward)
     plt.show()
-
-        # ### 4. Log progress and keep track of statistics
-        # episode_rewards = get_wrapper_by_name(env, "Monitor").get_episode_rewards()
-        # if len(episode_rewards) > 0:
-        #     mean_episode_reward = np.mean(episode_rewards[-100:])
-        # if len(episode_rewards) > 100:
-        #     best_mean_episode_reward = max(best_mean_episode_reward, mean_episode_reward)
-
-        # Statistic["mean_episode_rewards"].append(mean_episode_reward)
-        # Statistic["best_mean_episode_rewards"].append(best_mean_episode_reward)
-
-        # if t % LOG_EVERY_N_STEPS == 0 and t > learning_starts:
-        #     print("Timestep %d" % (t,))
-        #     print("mean reward (100 episodes) %f" % mean_episode_reward)
-        #     print("best mean reward %f" % best_mean_episode_reward)
-        #     print("episodes %d" % len(episode_rewards))
-        #     print("exploration %f" % exploration.value(t))
-        #     sys.stdout.flush()
-
-        #     # Dump statistics to pickle
-        #     with open('statistics.pkl', 'wb') as f:
-        #         pickle.dump(Statistic, f)
-        #         print("Saved to %s" % 'statistics.pkl')
