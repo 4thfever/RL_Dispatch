@@ -98,21 +98,6 @@ def dqn_learing(
     layer_size = d["layer_size"]
     log_every_n_steps = d["log_every_n_steps"]
 
-    # Construct an epilson greedy policy with given exploration schedule
-    def select_epilson_greedy_action(model, obs, t):
-        sample = random.random()
-        eps_threshold = exploration.value(t)
-        if sample > eps_threshold:
-            obs = torch.from_numpy(obs).type(dtype)
-            with torch.no_grad():
-                # 这里不记录梯度信息
-                # 这是因为之后会在batch的阶段重新计算
-                output = model(obs).data
-            action_buffer = env.onehot_encode(output.max(1)[1].cpu(), len(action_enum))
-        else:
-            action_buffer = env.rand_action(num_actor, len(action_enum))
-        return action_buffer
-
     # Initialize target q function and q function
     Q = q_func(env.num_observation, len(action_enum), num_actor, num_layer, layer_size).type(dtype)
     target_Q = q_func(env.num_observation, len(action_enum), num_actor, num_layer, layer_size).type(dtype)
@@ -136,6 +121,7 @@ def dqn_learing(
     ###############
     # RUN ENV     #
     ###############
+    explor_value = 'None'
     num_param_updates = 0
     mean_episode_reward = -float('nan')
     best_mean_episode_reward = -float('inf')
@@ -143,6 +129,8 @@ def dqn_learing(
 
     for t in count():
         env.num_step = t
+        if t > learning_starts:
+            explor_value = exploration.value(t)
 
         ### Check stopping criterion
         if env.stopping_criterion():
@@ -159,7 +147,7 @@ def dqn_learing(
 
         # Choose random action if not yet start learning
         if t > learning_starts:
-            action = select_epilson_greedy_action(Q, recent_observations, t)
+            action = env.select_epilson_greedy_action(Q, recent_observations, explor_value, dtype)
         else:
             action = env.rand_action(num_actor, len(action_enum))
         # Advance one step
@@ -243,11 +231,7 @@ def dqn_learing(
 
 
         ### 4. Log progress and keep track of statistics
-        if t > learning_starts:
-            exploration_value = exploration.value(t)
-        else:
-            exploration_value = 'None'
-        df_res.loc[t, :] = [t, env.num_episode, reward, exploration_value]
+        df_res.loc[t, :] = [t, env.num_episode, reward, explor_value]
 
         if t % log_every_n_steps == 0:
             # 输出信息
@@ -258,7 +242,7 @@ def dqn_learing(
                 best_mean_episode_reward = max(best_mean_episode_reward, mean_episode_reward)
                 print("Mean reward (100 episodes): %f" % mean_episode_reward)
                 print("Best mean reward: %f" % best_mean_episode_reward)
-                print("Exploration: %f" % exploration_value)
+                print("Exploration: %f" % explor_value)
             print("\n")
 
     # 结束

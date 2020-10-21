@@ -19,6 +19,8 @@ class Env():
         
         self.total_step = d["total_step"]
         self.data_folder = d["data_folder"]
+        self.num_actor = d["num_actor"]
+        self.action_enum = d["action_enum"]
 
         self.idx_network = 0
         self.num_step = 0
@@ -95,3 +97,18 @@ class Env():
         gb = df.groupby('Episode').apply(lambda x:x.iloc[-1])
         _mean_episode_reward = gb.mean()['Reward']
         return _mean_steps_per_episode, _mean_episode_reward
+
+    # Construct an epilson greedy policy with given exploration schedule
+    def select_epilson_greedy_action(self, model, obs, eps_threshold, dtype):
+        sample = random.random()
+        # eps_threshold = exploration.value(t)
+        if sample > eps_threshold:
+            obs = torch.from_numpy(obs).type(dtype)
+            with torch.no_grad():
+                # 这里不记录梯度信息
+                # 这是因为之后会在batch的阶段重新计算
+                output = model(obs).data
+            action_buffer = self.onehot_encode(output.max(1)[1].cpu(), len(self.action_enum))
+        else:
+            action_buffer = self.rand_action(self.num_actor, len(self.action_enum))
+        return action_buffer

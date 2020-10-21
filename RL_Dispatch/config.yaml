@@ -78,7 +78,7 @@ data_folder: "packages/data/14nodes"
 # replay_buffer_size: 1000000
 replay_buffer_size: 10000
 # learning_starts: 50000
-learning_starts: 5000
+learning_starts: 500
 learning_freq: 4
 target_update_freq: 500
 # log
