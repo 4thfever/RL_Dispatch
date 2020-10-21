@@ -64,17 +64,23 @@
 #   input_def:
 #     fields: ['init_state', 'action', 'reward', 'next_state']
 
+# case generation
+base_grid: "packages/grid/14nodes/14nodes.json"
+num_case: 100
+obj2change: ["load"]
+attr2change: ["p_mw"]
+fluc_area: [[0.8, 1.2]]
+
 
 # experiment
-total_step: 10000
-folder: "packages/data/14nodes"
+total_step: 50000
+data_folder: "packages/data/14nodes"
 # replay_buffer_size: 1000000
 replay_buffer_size: 10000
 # learning_starts: 50000
-learning_starts: 2000
+learning_starts: 5000
 learning_freq: 4
-# target_update_freq: 10000
-target_update_freq: 100
+target_update_freq: 500
 # log
 log_every_n_steps: 500
 
@@ -90,9 +96,10 @@ actor: gen
 action_attribute: vm_pu
 action_enum: [0.95, 0.975, 1, 1.025, 1.05]
 # observation
-num_observer: 14
-observer: res_bus
-observe_attribute: vm_pu
+observer: [res_bus, res_bus, res_line, res_line]
+observe_attribute: [vm_pu, va_degree, p_from_mw, q_from_mvar]
+target: [res_bus]
+target_attribute: [vm_pu]
 # episode
 max_step: 4
 

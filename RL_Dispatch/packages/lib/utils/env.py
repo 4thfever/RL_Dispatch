@@ -18,7 +18,7 @@ class Env():
         """
         
         self.total_step = d["total_step"]
-        self.folder = d["folder"]
+        self.data_folder = d["data_folder"]
 
         self.idx_network = 0
         self.num_step = 0
@@ -26,22 +26,25 @@ class Env():
         self.num_total_network = num_total_network
         self.stop_expr = False
         # pandapower wrapper
-        self.wrapper = Wrapper(self.folder, d)
+        self.wrapper = Wrapper(self.data_folder, d)
         self.wrapper.load_network(self.idx_network)
         if not num_total_network:
             self.num_total_network = self.wrapper.count_network_num()
+
+        self.num_observation = self.wrapper.num_observation
 
     def step(self, action):
         """
         执行下一步调度过程，并输出各项信息
         """
-        obs = self.wrapper.extract_obs()
+        obs = self.wrapper.extract('obs')
         action = self.wrapper.trans_action(action)
         self.wrapper.input_action(action)
         self.wrapper.run_network()
-        obs = self.wrapper.extract_obs()
-        self.wrapper.check_diverge(obs)
-        reward = self.wrapper.calcu_reward(obs)
+        tar = self.wrapper.extract('tar')
+        obs = self.wrapper.extract('obs')
+        self.wrapper.check_diverge(tar)
+        reward = self.wrapper.calcu_reward(tar)
         obs = self.wrapper.extra_feature(obs)
         done = self.wrapper.is_done(obs)
         self.wrapper.step += 1
@@ -49,7 +52,7 @@ class Env():
 
     def initial_run(self):
         self.wrapper.load_network(self.idx_network)
-        obs = self.wrapper.extract_obs()
+        obs = self.wrapper.extract('obs')
         return obs
 
     def reset(self):

@@ -16,6 +16,8 @@ class Wrapper():
         self.action_attribute = d["action_attribute"]
         self.observer = d["observer"]
         self.observe_attribute = d["observe_attribute"]
+        self.target = d["target"]
+        self.target_attribute = d["target_attribute"]
         self.max_step = d["max_step"]
         self.reward_value = d["reward_value"]
 
@@ -23,6 +25,16 @@ class Wrapper():
         self.net = None
         self.is_diverged = False
         self.step = 0
+        self.num_observation, self.num_target = self.count_obs_tar()
+
+    # 这里计数的前提是不同的case都是同一个网络结构
+    def count_obs_tar(self):
+        assert len(self.observer) == len(self.observe_attribute), '数量应相等'
+        net_buffer = pp.from_json(self.folder + '/' + os.listdir(self.folder)[0])
+        pp.runpp(net_buffer)
+        num_obs = sum([net_buffer[ele].shape[0] for ele in self.observer])
+        num_tar = sum([net_buffer[ele].shape[0] for ele in self.target])
+        return num_obs, num_tar
 
         
     def count_network_num(self):
@@ -36,7 +48,7 @@ class Wrapper():
         self.step = 0
         self.run_network()
 
-    def calcu_reward(self, obs):
+    def calcu_reward(self, target):
         '''
         根据观察量计算reward
         对于多个bus的情况，是向下取整
@@ -45,7 +57,7 @@ class Wrapper():
         '''
         rew_bad, rew_normal, rew_best = self.reward_value
         reward = rew_best
-        for ele in obs:
+        for ele in target:
             # print(ele)
             if ele < self.rb[0] or ele > self.rb[-1]:
                 reward = rew_bad
@@ -55,10 +67,22 @@ class Wrapper():
                 reward = rew_normal
         return reward
 
-    def extract_obs(self):
+    def extract(self, object_):
         # 从网络中提取观测值（如必要，压缩）
-        obs_raw = self.net[self.observer][self.observe_attribute].values
-        return obs_raw
+        if object_ == "obs":
+            source = self.observer
+            source_attr = self.observe_attribute
+            ret = np.zeros(self.num_observation)
+        if object_ == "tar":
+            source = self.target
+            source_attr = self.target_attribute
+            ret = np.zeros(self.num_target)
+        start = 0
+        for _obs, _attr in zip(source, source_attr):
+            buffer_ = self.net[_obs][_attr].values
+            ret[start: start+buffer_.size] = buffer_
+            start += buffer_.size
+        return ret
 
     def trans_action(self, action_raw):
         # 把NN输出的action变换成pandapower能理解的形式
@@ -84,9 +108,9 @@ class Wrapper():
     def exceed_max_step(self):
         return self.step >= self.max_step
 
-    def check_diverge(self, obs):
+    def check_diverge(self, target):
         # 输入的应当是标幺值
-        for ele in obs:
+        for ele in target:
             if ele < self.db[0] or ele > self.db[1]:
                 self.is_diverged = True
 
@@ -95,7 +119,8 @@ class Wrapper():
 
     @staticmethod
     def extra_feature(obs_raw):
-        # 把观测结果降维
+        # obs_raw = 
+        # 其次降维
         # 具体怎么降维留着之后再研究
         obs = obs_raw
         return obs

@@ -93,14 +93,10 @@ def dqn_learing(
     target_update_freq = d["target_update_freq"]
     num_actor = d["num_actor"]
     action_enum = d["action_enum"]
-    num_observer = d["num_observer"]
     observe_attribute = d["observe_attribute"]
     num_layer = d["num_layer"]
     layer_size = d["layer_size"]
     log_every_n_steps = d["log_every_n_steps"]
-
-    # 这里×1是因为只观测一个属性
-    num_observation = num_observer * 1
 
     # Construct an epilson greedy policy with given exploration schedule
     def select_epilson_greedy_action(model, obs, t):
@@ -118,8 +114,8 @@ def dqn_learing(
         return action_buffer
 
     # Initialize target q function and q function
-    Q = q_func(num_observation, len(action_enum), num_actor, num_layer, layer_size).type(dtype)
-    target_Q = q_func(num_observation, len(action_enum), num_actor, num_layer, layer_size).type(dtype)
+    Q = q_func(env.num_observation, len(action_enum), num_actor, num_layer, layer_size).type(dtype)
+    target_Q = q_func(env.num_observation, len(action_enum), num_actor, num_layer, layer_size).type(dtype)
 
     # Construct Q network optimizer function
     optimizer = optimizer_spec.constructor(Q.parameters(), **optimizer_spec.kwargs)
@@ -134,7 +130,7 @@ def dqn_learing(
                                 replay_buffer_size, 
                                 num_actor,
                                 len(action_enum),
-                                num_observation
+                                env.num_observation
                                 )
 
     ###############
@@ -175,6 +171,17 @@ def dqn_learing(
             obs = env.reset()
         last_obs = obs
 
+        # 初始化batch norm
+        if t == learning_starts:
+            input_ = torch.FloatTensor(replay_buffer.obs[:learning_starts+1])
+            # print(Q.state_dict()['bn.weight'])
+            # print(Q.state_dict()['bn.bias'])
+            # print(Q.bn.running_mean)
+            # print(Q.bn.running_var)
+            # print(input_[0])
+            input_ = Q.bn(input_)
+
+
         ### Perform experience replay and train the network.
         # Note that this is only done if the replay buffer contains enough samples
         # for us to learn something useful -- until then, the model will not be
@@ -187,7 +194,6 @@ def dqn_learing(
             # in which case there is no Q-value at the next state; at the end of an
             # episode, only the current state reward contributes to the target
             obs_batch, act_batch, rew_batch, next_obs_batch, done_mask = replay_buffer.sample(batch_size)
-            # print(rew_batch)
             # Convert numpy nd_array to torch variables for calculation
             obs_batch = torch.from_numpy(obs_batch).type(dtype)
             act_batch = torch.from_numpy(act_batch).int()
@@ -241,7 +247,7 @@ def dqn_learing(
             exploration_value = exploration.value(t)
         else:
             exploration_value = 'None'
-        df_res.loc[t, :] = [t, env.num_episode, replay_buffer.reward[t], exploration_value]
+        df_res.loc[t, :] = [t, env.num_episode, reward, exploration_value]
 
         if t % log_every_n_steps == 0:
             # 输出信息

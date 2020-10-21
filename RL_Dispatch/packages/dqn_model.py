@@ -14,6 +14,7 @@ class DQN(nn.Module):
         """
         assert num_layer == len(layer_size), "num_layer not equals to length of layer size"
         super(DQN, self).__init__()
+        self.bn = nn.BatchNorm1d(in_channels, track_running_stats=True)
         self.fcs = nn.ModuleList()
         self.fcs.append(nn.Linear(in_channels, layer_size[0]))
         for i in range(num_layer - 1):
@@ -21,6 +22,7 @@ class DQN(nn.Module):
         self.fcs_end = [nn.Linear(layer_size[-1], num_actions) for _ in range(num_actor)]
 
     def forward(self, x):
+        # x = self.bn(x)
         # 用于unsqueeze的dim，不这样会在shape上出问题
         dim = len(x.shape) - 1
         for fc in self.fcs:
