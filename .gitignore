@@ -1,4 +1,5 @@
 ﻿ref/
 
+__pycache__/
 /thought.docx
 *.pyc
