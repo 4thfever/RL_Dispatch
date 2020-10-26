@@ -255,7 +255,7 @@ def dqn_learing(
             if t > learning_starts:
                 mean_steps_per_episode, mean_episode_reward = env.cal_epi_reward(df_res, env.num_episode)
                 best_mean_episode_reward = max(best_mean_episode_reward, mean_episode_reward)
-                print(f"Mean Reward ({self.log_every_n_steps} episodes): {mean_episode_reward}")
+                print(f"Mean Reward ({log_every_n_steps} episodes): {mean_episode_reward}")
                 print("Best Mean Reward: %f" % best_mean_episode_reward)
                 print("Exploration: %f" % explor_value)
                 print("Learning Rate: %f" % lr)
