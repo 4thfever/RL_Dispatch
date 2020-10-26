@@ -73,7 +73,7 @@ fluc_area: [[0.8, 1.2]]
 
 
 # experiment
-total_step: 50000
+total_step: 10000
 data_folder: "packages/data/14nodes"
 # replay_buffer_size: 1000000
 replay_buffer_size: 10000
@@ -108,7 +108,11 @@ max_step: 4
 schedule_type: linear
 schedule_timesteps: 10000
 final_p: 0.1
-
+# learning rate
+learning_rate: 0.00025
+step_optimizer: True
+step_size: 80000
+gamma_lr: 0.5
 
 # Hyper parameter
 # network
@@ -117,7 +121,6 @@ layer_size: [128, 64, 32]
 # Deep learning training
 batch_size: 32
 gamma: 0.99
-learning_rate: 0.00025
 alpha: 0.95
 eps: 0.01
 

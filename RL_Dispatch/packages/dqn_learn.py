@@ -3,6 +3,7 @@
 主要的bug来自于Q网络的输出是二维的
 """
 import sys
+import time
 import random
 import pickle
 from collections import namedtuple
@@ -15,6 +16,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.autograd as autograd
 import matplotlib.pyplot as plt
+from torch import optim
+from torch.optim.lr_scheduler import StepLR
 
 from .lib.utils.replay_buffer import ReplayBuffer
 
@@ -29,18 +32,10 @@ class Variable(autograd.Variable):
             data = data.cuda()
         super(Variable, self).__init__(data, *args, **kwargs)
 
-"""
-    OptimizerSpec containing following attributes
-        constructor: The optimizer constructor ex: RMSprop
-        kwargs: {Dict} arguments for constructing optimizer
-"""
-OptimizerSpec = namedtuple("OptimizerSpec", ["constructor", "kwargs"])
-
 
 def dqn_learing(
     env,
     q_func,
-    optimizer_spec,
     exploration,
     d,
     ):
@@ -97,13 +92,28 @@ def dqn_learing(
     num_layer = d["num_layer"]
     layer_size = d["layer_size"]
     log_every_n_steps = d["log_every_n_steps"]
+    learning_rate = d["learning_rate"]
+    alpha = d["alpha"]
+    eps = d["eps"]
 
     # Initialize target q function and q function
     Q = q_func(env.num_observation, len(action_enum), num_actor, num_layer, layer_size).type(dtype)
     target_Q = q_func(env.num_observation, len(action_enum), num_actor, num_layer, layer_size).type(dtype)
 
     # Construct Q network optimizer function
-    optimizer = optimizer_spec.constructor(Q.parameters(), **optimizer_spec.kwargs)
+    optimizer = optim.RMSprop(Q.parameters(),
+                              lr=learning_rate, 
+                              alpha=alpha, 
+                              eps=eps,
+                              )
+    # 负责learning rate的变化
+    if d["step_optimizer"] == True:
+        step_size = d["step_size"]
+        gamma_lr = d["gamma_lr"]
+        optim_scheduler = StepLR(optimizer, step_size=step_size, gamma=gamma_lr)
+    else:
+        optim_scheduler = optimizer
+
 
     # log info
     best_mean_episode_reward = -1000
@@ -127,6 +137,7 @@ def dqn_learing(
     best_mean_episode_reward = -float('inf')
     last_obs = env.initial_run()
 
+    time_point = time.time()
     for t in count():
         env.num_step = t
         if t > learning_starts:
@@ -222,7 +233,7 @@ def dqn_learing(
             current_Q_values.backward(d_error.unsqueeze(2).data)
 
             # Perfom the update
-            optimizer.step()
+            optim_scheduler.step()
             num_param_updates += 1
 
             # Periodically update the target network by Q network to target Q network
@@ -232,17 +243,22 @@ def dqn_learing(
 
         ### 4. Log progress and keep track of statistics
         df_res.loc[t, :] = [t, env.num_episode, reward, explor_value]
+        time_used = time.time() - time_point
 
         if t % log_every_n_steps == 0:
+            time_point = time.time()
+            lr = optimizer.param_groups[0]['lr']
             # 输出信息
             print("Timestep: %d" % (t,))
             print("Episodes: %d" % env.num_episode)
+            print("Time Consumption: %.2f s" % time_used)
             if t > learning_starts:
                 mean_steps_per_episode, mean_episode_reward = env.cal_epi_reward(df_res, env.num_episode)
                 best_mean_episode_reward = max(best_mean_episode_reward, mean_episode_reward)
-                print("Mean reward (100 episodes): %f" % mean_episode_reward)
-                print("Best mean reward: %f" % best_mean_episode_reward)
+                print(f"Mean Reward ({self.log_every_n_steps} episodes): {mean_episode_reward}")
+                print("Best Mean Reward: %f" % best_mean_episode_reward)
                 print("Exploration: %f" % explor_value)
+                print("Learning Rate: %f" % lr)
             print("\n")
 
     # 结束

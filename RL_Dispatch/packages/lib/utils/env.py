@@ -21,19 +21,23 @@ class Env():
         self.data_folder = d["data_folder"]
         self.num_actor = d["num_actor"]
         self.action_enum = d["action_enum"]
+        self.log_every_n_steps = d["log_every_n_steps"]
 
-        self.idx_network = 0
+        self.count_network = 0
         self.num_step = 0
         self.num_episode = 0
-        self.num_total_network = num_total_network
+        
         self.stop_expr = False
+
         # pandapower wrapper
         self.wrapper = Wrapper(self.data_folder, d)
-        self.wrapper.load_network(self.idx_network)
+        self.num_observation = self.wrapper.num_observation
+
+        self.num_total_network = num_total_network
         if not num_total_network:
             self.num_total_network = self.wrapper.count_network_num()
-
-        self.num_observation = self.wrapper.num_observation
+        self.idxs_network = np.random.permutation(self.num_total_network)
+        self.wrapper.load_network(self.idxs_network[self.count_network])
 
     def step(self, action):
         """
@@ -53,7 +57,7 @@ class Env():
         return obs, reward, done
 
     def initial_run(self):
-        self.wrapper.load_network(self.idx_network)
+        self.wrapper.load_network(self.idxs_network[self.count_network])
         obs = self.wrapper.extract('obs')
         return obs
 
@@ -62,10 +66,11 @@ class Env():
         在某个网络的调度过程结束（稳定或者解列）的前提下，
         进入下一个网络。
         """
-        self.idx_network += 1
+        self.count_network += 1
         self.num_episode += 1
-        if self.idx_network >= self.num_total_network:
-            self.idx_network = 0
+        if self.count_network >= self.num_total_network:
+            self.count_network = 0
+            self.idxs_network = np.random.permutation(self.num_total_network)
         return self.initial_run()
 
     def stopping_criterion(self):
@@ -92,8 +97,8 @@ class Env():
         return torch.argmax(x, dim=-1)
 
     def cal_epi_reward(self, df, _num_episode):
-        df = df[df['Episode'].isin(list(range(_num_episode-100, _num_episode)))]
-        _mean_steps_per_episode = df.shape[0]/100
+        df = df[df['Episode'].isin(list(range(_num_episode-self.log_every_n_steps, _num_episode)))]
+        _mean_steps_per_episode = df.shape[0]/self.log_every_n_steps
         gb = df.groupby('Episode').apply(lambda x:x.iloc[-1])
         _mean_episode_reward = gb.mean()['Reward']
         return _mean_steps_per_episode, _mean_episode_reward
