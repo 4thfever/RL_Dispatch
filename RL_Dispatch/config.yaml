@@ -109,9 +109,9 @@ schedule_type: linear
 schedule_timesteps: 10000
 final_p: 0.1
 # learning rate
-learning_rate: 0.00025
+learning_rate: 0.001
 step_optimizer: True
-step_size: 80000
+step_size: 5000
 gamma_lr: 0.5
 
 # Hyper parameter

@@ -22,7 +22,6 @@ class DQN(nn.Module):
         self.fcs_end = [nn.Linear(layer_size[-1], num_actions) for _ in range(num_actor)]
 
     def forward(self, x):
-        # x = self.bn(x)
         # 用于unsqueeze的dim，不这样会在shape上出问题
         dim = len(x.shape) - 1
         for fc in self.fcs:

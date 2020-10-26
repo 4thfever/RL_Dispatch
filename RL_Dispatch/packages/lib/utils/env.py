@@ -26,13 +26,13 @@ class Env():
         self.count_network = 0
         self.num_step = 0
         self.num_episode = 0
-        
         self.stop_expr = False
 
         # pandapower wrapper
         self.wrapper = Wrapper(self.data_folder, d)
         self.num_observation = self.wrapper.num_observation
 
+        # network
         self.num_total_network = num_total_network
         if not num_total_network:
             self.num_total_network = self.wrapper.count_network_num()
@@ -51,8 +51,7 @@ class Env():
         obs = self.wrapper.extract('obs')
         self.wrapper.check_diverge(tar)
         reward = self.wrapper.calcu_reward(tar)
-        obs = self.wrapper.extra_feature(obs)
-        done = self.wrapper.is_done(obs)
+        done = self.wrapper.is_done(tar)
         self.wrapper.step += 1
         return obs, reward, done
 

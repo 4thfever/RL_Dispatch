@@ -26,13 +26,6 @@ from .lib.utils.replay_buffer import ReplayBuffer
 USE_CUDA = torch.cuda.is_available()
 dtype = torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTensor
 
-class Variable(autograd.Variable):
-    def __init__(self, data, *args, **kwargs):
-        if USE_CUDA:
-            data = data.cuda()
-        super(Variable, self).__init__(data, *args, **kwargs)
-
-
 def dqn_learing(
     env,
     q_func,
@@ -110,9 +103,11 @@ def dqn_learing(
     if d["step_optimizer"] == True:
         step_size = d["step_size"]
         gamma_lr = d["gamma_lr"]
-        optim_scheduler = StepLR(optimizer, step_size=step_size, gamma=gamma_lr)
-    else:
-        optim_scheduler = optimizer
+        optim_scheduler = StepLR(optimizer, 
+                                 step_size=step_size, 
+                                 gamma=gamma_lr,
+                                 verbose=True,
+                                 )
 
 
     # log info
@@ -139,6 +134,9 @@ def dqn_learing(
 
     time_point = time.time()
     for t in count():
+        if d["step_optimizer"] == True:
+            optim_scheduler.step()
+
         env.num_step = t
         if t > learning_starts:
             explor_value = exploration.value(t)
@@ -233,7 +231,7 @@ def dqn_learing(
             current_Q_values.backward(d_error.unsqueeze(2).data)
 
             # Perfom the update
-            optim_scheduler.step()
+            optimizer.step()
             num_param_updates += 1
 
             # Periodically update the target network by Q network to target Q network
@@ -249,16 +247,16 @@ def dqn_learing(
             time_point = time.time()
             lr = optimizer.param_groups[0]['lr']
             # 输出信息
-            print("Timestep: %d" % (t,))
-            print("Episodes: %d" % env.num_episode)
-            print("Time Consumption: %.2f s" % time_used)
+            print(f"Timestep: {t}")
+            print(f"Episodes: {env.num_episode}")
+            print(f"Time Consumption: {time_used:.2f} s")
             if t > learning_starts:
                 mean_steps_per_episode, mean_episode_reward = env.cal_epi_reward(df_res, env.num_episode)
                 best_mean_episode_reward = max(best_mean_episode_reward, mean_episode_reward)
-                print(f"Mean Reward ({log_every_n_steps} episodes): {mean_episode_reward}")
-                print("Best Mean Reward: %f" % best_mean_episode_reward)
-                print("Exploration: %f" % explor_value)
-                print("Learning Rate: %f" % lr)
+                print(f"Mean Reward ({log_every_n_steps} episodes): {mean_episode_reward:.2f}")
+                print(f"Best Mean Reward: {best_mean_episode_reward:.2f}")
+                print(f"Exploration: {explor_value}")
+                print(f"Learning Rate: {lr}")
             print("\n")
 
     # 结束

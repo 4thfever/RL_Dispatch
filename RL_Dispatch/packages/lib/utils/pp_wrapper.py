@@ -93,13 +93,13 @@ class Wrapper():
         # 给network输入action
         self.net[self.actor][self.action_attribute] = action
 
-    def is_done(self, obs):
+    def is_done(self, tar):
         '''
         判断这个net是否已经结束
         已经最优化或者崩溃了
         '''
-        # print(obs, self.is_diverged, self.step)
-        done_mask = ((self.calcu_reward(obs) == 100) or 
+        rew = (self.calcu_reward(tar))
+        done_mask = (rew == self.reward_value[-1] or 
                     self.is_diverged or 
                     self.exceed_max_step())
         return done_mask
