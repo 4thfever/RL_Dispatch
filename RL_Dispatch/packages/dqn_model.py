@@ -24,6 +24,7 @@ class DQN(nn.Module):
     def forward(self, x):
         # 用于unsqueeze的dim，不这样会在shape上出问题
         dim = len(x.shape) - 1
+        x = self.bn(x)
         for fc in self.fcs:
             x = F.relu(fc(x))
         l_y = [torch.unsqueeze(F.relu(fc_end(x)), dim) for fc_end in self.fcs_end]

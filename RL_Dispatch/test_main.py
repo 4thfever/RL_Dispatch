@@ -10,7 +10,12 @@ from unittest import TestCase
 sys.path.insert(0, os.path.abspath(
     os.path.join(os.path.dirname(__file__), '..')))
 
+import torch
 import pandapower as pp
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
 from packages.dqn_model import DQN
 from packages.lib.utils.env import Env
 from packages.lib.utils.pp_wrapper import Wrapper
@@ -49,10 +54,8 @@ class TestGenerator(TestCase):
 
 
 if __name__ == '__main__':
-    with open('config.yaml') as file:
-        d = yaml.load(file)
-    # 把dict加载到locals变量中
-    for key, value in d.items():
-        locals()[key] = value
-
-    unittest.main()
+    a = np.array([1.0])
+    a = torch.from_numpy(a)
+    print(a.dtype)
+    a = a.double()
+    print(a.dtype)

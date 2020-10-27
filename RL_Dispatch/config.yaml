@@ -64,6 +64,32 @@
 #   input_def:
 #     fields: ['init_state', 'action', 'reward', 'next_state']
 
+
+    # '''
+    # q_func: function
+    #     Model to use for computing the q function. It should accept the
+    #     following named arguments:
+    #         input_channel: int
+    #             number of channel of input.
+    #         array_action: int
+    #             number of actions
+    # exploration: Schedule (defined in utils.schedule)
+    #     schedule for probability of chosing random action.
+    # replay_buffer_size: int
+    #     How many memories to store in the replay buffer.
+    # batch_size: int
+    #     How many transitions to sample each time experience is replayed.
+    # gamma: float
+    #     Discount Factor
+    # learning_starts: int
+    #     After how many environment steps to start replaying experiences
+    # learning_freq: int
+    #     How many steps of environment to take between every experience replay
+    # target_update_freq: int
+    #     How many experience replay rounds (not steps!) to perform between
+    #     each update to the target Q network
+    # """
+
 # case generation
 base_grid: "packages/grid/14nodes/14nodes.json"
 num_case: 100

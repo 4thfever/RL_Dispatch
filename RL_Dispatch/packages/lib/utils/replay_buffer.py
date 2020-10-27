@@ -92,9 +92,9 @@ class ReplayBuffer(object):
         idxes = sample_n_unique(lambda: random.randint(0, self.num_in_buffer - 2), batch_size)
         return self._encode_sample(idxes)
 
-    def encode_recent_observation(self):
-        assert self.num_in_buffer > 0
-        return self.obs[(self.next_idx - 1) % self.size]
+    # def encode_recent_observation(self):
+    #     assert self.num_in_buffer > 0
+    #     return self.obs[(self.next_idx - 1) % self.size]
 
     def store_obs(self, input_obs):
         """Store a single observation in the buffer at the next available index, overwriting
@@ -120,7 +120,7 @@ class ReplayBuffer(object):
 
         return ret
 
-    def store_effect(self, idx, action, reward, done):
+    def store_result(self, idx, action, reward, done):
         """Store effects of action taken after obeserving frame stored
         at index idx. The reason `store_frame` and `store_effect` is broken
         up into two functions is so that one can call `encode_recent_observation`
