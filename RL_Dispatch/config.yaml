@@ -1,95 +1,3 @@
-# # giving case generation infomation
-# TrainLoader:
-#   base_grid:
-#     existed_in_pp: false
-#     name: case14
-#     grid_path: './data/base_grid/14nodes/node14.txt'
-
-#   sample_construct:
-#     # generate multiple initial power flow cases
-#     - !caseDuplicator
-#       input: '__base_grid__'
-#       case_num: 2
-#       output:
-#         -
-#           name: 'origin_cases'
-#           fields: '__all__'
-#     - !pfCaseInitializer
-#       input: 'origin_cases'
-#       case_transform:
-#         -
-#           name: fluctuation_abs
-#           fluc_states: ['load:p_mw', 'load:q_mvar']
-#           fluc_vals: [[-5. ,5.], [-2., 2.]]
-#         -
-#           name: fluctuation_rel
-#           fluc_states: ['load:p_mw', 'load:q_mvar']
-#           fluc_ratios: [[0.6, 1.2], [0.6, 1.2]]
-#       output:
-#         -
-#           name: 'origin_cases_with_fluc'
-#           fields: '__all__'
-#     - !pfSolver
-#       input: 'origin_cases_with_fluc'
-#       output:
-#         -
-#           name: 'power_flow_cases_with_fluc'
-#           fields: '__all__'
-
-#     - !pfActionGenerator
-#       input: 'origin_cases_with_fluc'
-#       action_state: ['gen:vm_pu']
-#       action_type: ['discrete']
-#       action_enum: [[0.9, 0.95, 1.0, 1.05, 1.1]]
-#       output:
-#         -
-#           name: 'gen_voltage_mag_action'
-#           fields: '__all__'
-
-#     - !pfActionExecutor
-#       input: ['origin_cases_with_fluc', 'gen_voltage_mag_action']
-#       output:
-#         -
-#           name: 'cases_after_'
-#     #- !powerFlowSolver
-#     #  input: 'origin_cases_with_fluc'
-#     #  output:
-#     #    -
-#     #      name: 'power_flow_cases'
-#     #      fields: '__all__'
-
-#     #- !rewardCalculator
-#       #
-
-#   input_def:
-#     fields: ['init_state', 'action', 'reward', 'next_state']
-
-
-    # '''
-    # q_func: function
-    #     Model to use for computing the q function. It should accept the
-    #     following named arguments:
-    #         input_channel: int
-    #             number of channel of input.
-    #         array_action: int
-    #             number of actions
-    # exploration: Schedule (defined in utils.schedule)
-    #     schedule for probability of chosing random action.
-    # replay_buffer_size: int
-    #     How many memories to store in the replay buffer.
-    # batch_size: int
-    #     How many transitions to sample each time experience is replayed.
-    # gamma: float
-    #     Discount Factor
-    # learning_starts: int
-    #     After how many environment steps to start replaying experiences
-    # learning_freq: int
-    #     How many steps of environment to take between every experience replay
-    # target_update_freq: int
-    #     How many experience replay rounds (not steps!) to perform between
-    #     each update to the target Q network
-    # """
-
 # case generation
 base_grid: "packages/grid/14nodes/14nodes.json"
 num_case: 100
@@ -112,15 +20,16 @@ log_every_n_steps: 500
 
 
 # wrapper
-# reward_border: [0.85, 0.95, 1.05, 1.15]
 reward_border: [0.94, 0.97, 1.03, 1.06]
 reward_value: [-1, 0.5, 1]
 diverge_border: [0.4, 2]
+
 # action
 num_actor: 4
 actor: gen
 action_attribute: vm_pu
 action_enum: [0.95, 0.975, 1, 1.025, 1.05]
+
 # observation
 observer: [res_bus, res_bus, res_line, res_line]
 observe_attribute: [vm_pu, va_degree, p_from_mw, q_from_mvar]
@@ -134,10 +43,12 @@ max_step: 4
 schedule_type: linear
 schedule_timesteps: 10000
 final_p: 0.1
+
 # learning rate
-learning_rate: 0.001
+learning_rate: 0.005
 step_optimizer: True
 step_size: 5000
+# learning rate衰减率
 gamma_lr: 0.5
 
 # Hyper parameter
@@ -146,6 +57,7 @@ num_layer: 3
 layer_size: [128, 64, 32]
 # Deep learning training
 batch_size: 32
+# next Q衰减率
 gamma: 0.99
 alpha: 0.95
 eps: 0.01

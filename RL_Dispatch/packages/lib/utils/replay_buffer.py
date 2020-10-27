@@ -1,5 +1,5 @@
 """
-    This file is copied/apdated from https://github.com/berkeleydeeprlcourse/homework/tree/master/hw3
+储存各类data，用于之后的强化学习训练
 """
 import numpy as np
 import random
@@ -61,50 +61,21 @@ class ReplayBuffer(object):
 
 
     def sample(self, batch_size):
-        """Sample `batch_size` different transitions.
-
-        i-th sample transition is the following:
-
+        """
+        从库中取出batch_size个对象
         when observing `obs_batch[i]`, action `act_batch[i]` was taken,
         after which reward `rew_batch[i]` was received and subsequent
         observation  next_obs_batch[i] was observed, unless the epsiode
         was done which is represented by `done_mask[i]` which is equal
         to 1 if episode has ended as a result of that action.
-
-        Parameters
-        ----------
-        batch_size: int
-            How many transitions to sample.
-
-        Returns
-        -------
-        obs_batch: np.array
-
-        act_batch: np.array
-            Array of shape (batch_size,) and dtype np.int32
-        rew_batch: np.array
-            Array of shape (batch_size,) and dtype np.float32
-        next_obs_batch: np.array
-        done_mask: np.array
-            Array of shape (batch_size,) and dtype np.float32
         """
         assert self.can_sample(batch_size)
         idxes = sample_n_unique(lambda: random.randint(0, self.num_in_buffer - 2), batch_size)
         return self._encode_sample(idxes)
 
-    # def encode_recent_observation(self):
-    #     assert self.num_in_buffer > 0
-    #     return self.obs[(self.next_idx - 1) % self.size]
-
     def store_obs(self, input_obs):
         """Store a single observation in the buffer at the next available index, overwriting
-        old frames if necessary.
-
-        Returns
-        -------
-        idx: int
-            Index at which the frame is stored. To be used for `store_effect` later.
-        """
+        old frames if necessary."""
 
         if self.obs is None:
             self.obs      = np.zeros([self.size, self.num_observation], dtype=np.float32)
@@ -121,22 +92,6 @@ class ReplayBuffer(object):
         return ret
 
     def store_result(self, idx, action, reward, done):
-        """Store effects of action taken after obeserving frame stored
-        at index idx. The reason `store_frame` and `store_effect` is broken
-        up into two functions is so that one can call `encode_recent_observation`
-        in between.
-
-        Paramters
-        ---------
-        idx: int
-            Index in buffer of recently observed frame (returned by `store_frame`).
-        action: int
-            Action that was performed upon observing this frame.
-        reward: float
-            Reward that was received when the actions was performed.
-        done: bool
-            True if episode was finished after performing that action.
-        """
         self.action[idx] = action
         self.reward[idx] = reward
         self.done[idx]   = done

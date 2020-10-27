@@ -58,7 +58,6 @@ class Wrapper():
         rew_bad, rew_normal, rew_best = self.reward_value
         reward = rew_best
         for ele in target:
-            # print(ele)
             if ele < self.rb[0] or ele > self.rb[-1]:
                 reward = rew_bad
                 break
@@ -78,8 +77,8 @@ class Wrapper():
             source_attr = self.target_attribute
             ret = np.zeros(self.num_target)
         start = 0
-        for _obs, _attr in zip(source, source_attr):
-            buffer_ = self.net[_obs][_attr].values
+        for ele, _attr in zip(source, source_attr):
+            buffer_ = self.net[ele][_attr].values
             ret[start: start+buffer_.size] = buffer_
             start += buffer_.size
         return ret
@@ -104,8 +103,8 @@ class Wrapper():
                     self.exceed_max_step())
         return done_mask
 
-    # 每个网络最多的调度步数
     def exceed_max_step(self):
+        # 每个网络最多的调度步数
         return self.step >= self.max_step
 
     def check_diverge(self, target):
@@ -119,8 +118,7 @@ class Wrapper():
 
     @staticmethod
     def extra_feature(obs_raw):
-        # obs_raw = 
-        # 其次降维
+        # 降维
         # 具体怎么降维留着之后再研究
         obs = obs_raw
         return obs

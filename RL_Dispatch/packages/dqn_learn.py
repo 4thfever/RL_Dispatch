@@ -70,7 +70,7 @@ def dqn_learing(
                                  )
 
     # 初始化log info
-    best_mean_episode_reward = -1
+    best_mean_reward = -1
     cols = ["Timestep", "Episode", "Reward", "Exploration"]
     df_res = pd.DataFrame(columns=cols)
 
@@ -92,7 +92,6 @@ def dqn_learing(
 
     time_point = time.time()
     for t in count():
-        Q.eval()
         if d["step_optimizer"] == True:
             optim_scheduler.step()
 
@@ -103,16 +102,13 @@ def dqn_learing(
         ### Step the env and store the transition
         # Store lastest observation in replay memory and last_idx can be used to store action, reward, done
         last_idx = replay_buffer.store_obs(last_obs)
-        # encode_recent_observation will take the latest observation
-        # that you pushed into the buffer and compute the corresponding
-        # input that should be given to a Q network by appending some
-        # previous frames.
-        # recent_observations = replay_buffer.encode_recent_observation()
 
         # Choose random action if not yet start learning
         if t > learning_starts:
             explor_value = exploration.value(t)
+            Q.eval()
             action = env.select_epilson_greedy_action(Q, last_obs, explor_value, device)
+            Q.train()
         else:
             action = env.rand_action(num_actor, len(action_enum))
 
@@ -134,7 +130,6 @@ def dqn_learing(
         if (t > learning_starts and
             t % learning_freq == 0 and
             replay_buffer.can_sample(batch_size)):
-            Q.train()
             # Use the replay buffer to sample a batch of transitions
             # Note: done_mask[i] is 1 if the next state corresponds to the end of an episode,
             # in which case there is no Q-value at the next state; at the end of an
@@ -152,7 +147,7 @@ def dqn_learing(
             # 把Q value中对应实际动作的那部分挑出来，并整理shape
             current_Q_values = Q(obs_batch).gather(-1, env.onehot_decode(act_batch).unsqueeze(-1))
             # 挑出q值中最大的那个，映射到没有结束的调度序列中
-            # Detach variable from the current graph since we don't want gradients for next Q to propagated
+            # Detach, 因为next Q的梯度是不希望传播的
             next_max_q = target_Q(next_obs_batch).detach().max(2)[0]
             next_Q_values = not_done_mask.unsqueeze(1) * next_max_q
 
@@ -192,10 +187,10 @@ def dqn_learing(
             print(f"Episodes: {env.num_episode}")
             print(f"Time Consumption: {time_used:.2f} s")
             if t > learning_starts:
-                mean_steps_per_episode, mean_episode_reward = env.cal_epi_reward(df_res, env.num_episode)
-                best_mean_episode_reward = max(best_mean_episode_reward, mean_episode_reward)
-                print(f"Mean Reward ({log_every_n_steps} episodes): {mean_episode_reward:.2f}")
-                print(f"Best Mean Reward: {best_mean_episode_reward:.2f}")
+                mean_steps_episode, mean_reward_episode = env.cal_epi_reward(df_res, env.num_episode)
+                best_mean_reward = max(best_mean_reward, mean_reward_episode)
+                print(f"Mean Reward ({log_every_n_steps} episodes): {mean_reward_episode:.2f}")
+                print(f"Best Mean Reward: {best_mean_reward:.2f}")
                 print(f"Exploration: {explor_value:.2f}")
                 print(f"Learning Rate: {lr}")
             print("\n")

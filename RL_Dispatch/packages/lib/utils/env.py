@@ -86,21 +86,23 @@ class Env():
         res = np.zeros((len(value), act_per_gen))
         res[np.arange(len(value)), value] = 1
         return res
-        
-    def rand_action(self, num_gen, act_per_gen):
-        ran_a = [random.randint(0, act_per_gen-1) for _ in range(num_gen)]
-        return self.onehot_encode(ran_a,act_per_gen)
 
     @staticmethod
     def onehot_decode(x):
         return torch.argmax(x, dim=-1)
 
+    def rand_action(self, num_gen, act_per_gen):
+        ran_a = [random.randint(0, act_per_gen-1) for _ in range(num_gen)]
+        return self.onehot_encode(ran_a,act_per_gen)
+
+    # 计算按照episode整理的reward
     def cal_epi_reward(self, df, _num_episode):
-        df = df[df['Episode'].isin(list(range(_num_episode-self.log_every_n_steps, _num_episode)))]
-        _mean_steps_per_episode = df.shape[0]/self.log_every_n_steps
+        start = _num_episode-self.log_every_n_steps
+        df = df[df['Episode'].isin(range(start, _num_episode))]
         gb = df.groupby('Episode').apply(lambda x:x.iloc[-1])
-        _mean_episode_reward = gb.mean()['Reward']
-        return _mean_steps_per_episode, _mean_episode_reward
+        mean_steps_per_episode = df.shape[0]/self.log_every_n_steps
+        mean_episode_reward = gb.mean()['Reward']
+        return mean_steps_episode, mean_reward_episode
 
     # Construct an epilson greedy policy with given exploration schedule
     def select_epilson_greedy_action(self, model, obs, eps_threshold, device):
@@ -111,7 +113,8 @@ class Env():
                 # 这里不记录梯度信息
                 # 这是因为之后会在batch的阶段重新计算
                 output = model(obs).data
-            action_buffer = self.onehot_encode(output.squeeze().max(1)[1].cpu(), len(self.action_enum))
+                output = output.squeeze().max(1)[1].cpu()
+            action_buffer = self.onehot_encode(output, len(self.action_enum))
         else:
             action_buffer = self.rand_action(self.num_actor, len(self.action_enum))
         return action_buffer
