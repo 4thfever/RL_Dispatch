@@ -5,10 +5,11 @@ import os
 
 import numpy as np
 import pandapower as pp
+from pandapower import plotting
 
 
 class Wrapper():
-    def __init__(self, folder, d):
+    def __init__(self, d):
         self.rb = d["reward_border"]
         self.db = d["diverge_border"]
         self.actor = d["actor"]
@@ -20,8 +21,8 @@ class Wrapper():
         self.target_attribute = d["target_attribute"]
         self.max_step = d["max_step"]
         self.reward_value = d["reward_value"]
+        self.folder = d["data_folder"]
 
-        self.folder = folder
         self.net = None
         self.is_diverged = False
         self.step = 0
@@ -44,6 +45,15 @@ class Wrapper():
     # 从文件中根据编号读入网络
     def load_network(self, num):
         self.net = pp.from_json(self.folder + '/' + os.listdir(self.folder)[num])
+
+        # self.net['bus']['max_vm_pu'] = np.nan
+        # self.net['bus']['min_vm_pu'] = np.nan
+        # self.net['bus']['type'] = 'n'
+        # self.net['load']['p_mw'][3] = 200
+        # self.net['load']['q_mvar'][3] = 200
+        self.net['ext_grid']['in_service'] = False
+        self.net['gen']['slack'][0] = True
+
         self.is_diverged = False
         self.step = 0
         self.run_network()
@@ -64,6 +74,7 @@ class Wrapper():
             if (((ele > self.rb[0]) and (ele < self.rb[1])) or 
                 ((ele < self.rb[-1]) and (ele > self.rb[-2]))):
                 reward = rew_normal
+                break
         return reward
 
     def extract(self, object_):
@@ -114,7 +125,7 @@ class Wrapper():
                 self.is_diverged = True
 
     def run_network(self):
-        pp.runpp(self.net)
+        pp.runpp(self.net, numba=False, voltage_depend_loads=False)
 
     @staticmethod
     def extra_feature(obs_raw):

@@ -1,20 +1,23 @@
 '''
 Unittest 主函数，用来做各个模块的单元测试
 '''
+'''
+单元测试主程序
+'''
 import unittest
 import sys
 import os
 import yaml
 from unittest import TestCase
 
-sys.path.insert(0, os.path.abspath(
-    os.path.join(os.path.dirname(__file__), '..')))
-
 import torch
-import pandapower as pp
 import numpy as np
+import pandapower as pp
 import pandas as pd
 import matplotlib.pyplot as plt
+
+sys.path.insert(0, os.path.abspath(
+    os.path.join(os.path.dirname(__file__), '..')))
 
 from packages.dqn_model import DQN
 from packages.lib.utils.env import Env
@@ -23,7 +26,7 @@ from packages.lib.utils.replay_buffer import ReplayBuffer
 from packages.lib.generator.case_generator import case_generate, fluc_value
 
 # test case generator
-class TestGenerator(TestCase):
+class Test(TestCase):
 
     def test_fluc(self):
         net = pp.from_json(base_grid)
@@ -39,23 +42,24 @@ class TestGenerator(TestCase):
     def test_generate(self):
         case_generate(d, output=False)
 
-# test wrapper
-# test env
-# test replaybuffer
+    # test wrapper
+    # test env
+    # test replaybuffer
 
-
-# test model
-# class TestModel(TestCase):
-#     def test_forward(self):
-#         model = DQN(env.num_observation, len(action_enum), num_actor, num_layer, layer_size)
-#         y = model(input_ex)
-#         self.assertEqual(y.size(), output_ex.size())
-#         self.assertAlmostEqual(y, output_ex, places=3)
+    # test model
+    def test_forward(self):
+        model = DQN(env.num_observation, len(action_enum), num_actor, num_layer, layer_size)
+        x = torch.from_numpy(np.ones([env.num_observation])).float()
+        y = model(x)
+        self.assertEqual(y.shape().numpy(), [num_actor, len(action_enum)])
 
 
 if __name__ == '__main__':
-    a = np.array([1.0])
-    a = torch.from_numpy(a)
-    print(a.dtype)
-    a = a.double()
-    print(a.dtype)
+    with open('config.yaml') as file:
+        d = yaml.load(file)
+    # 把dict加载到locals变量中
+    for key, value in d.items():
+        locals()[key] = value
+    env = Env(d)
+
+    unittest.main()

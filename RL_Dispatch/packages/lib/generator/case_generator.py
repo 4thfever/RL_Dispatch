@@ -24,7 +24,6 @@ def case_generate(d, output=True):
 
     # generating cases
     for num in range(num_case):
-        print(num)
         # set network's deepcopy
         net_copy = copy.deepcopy(net)
 

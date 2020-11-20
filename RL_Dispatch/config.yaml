@@ -1,10 +1,16 @@
 # case generation
 base_grid: "packages/grid/14nodes/14nodes.json"
-num_case: 100
+num_case: 500
 obj2change: ["load"]
 attr2change: ["p_mw"]
 fluc_area: [[0.8, 1.2]]
 
+# problem formulation
+target: [res_bus]
+target_attribute: [vm_pu]
+reward_border: [0.93, 0.96, 1.04, 1.07]
+reward_value: [-1, 0.5, 1]
+diverge_border: [0.4, 2]
 
 # experiment
 total_step: 10000
@@ -19,11 +25,6 @@ target_update_freq: 500
 log_every_n_steps: 500
 
 
-# wrapper
-reward_border: [0.94, 0.97, 1.03, 1.06]
-reward_value: [-1, 0.5, 1]
-diverge_border: [0.4, 2]
-
 # action
 num_actor: 4
 actor: gen
@@ -33,8 +34,7 @@ action_enum: [0.95, 0.975, 1, 1.025, 1.05]
 # observation
 observer: [res_bus, res_bus, res_line, res_line]
 observe_attribute: [vm_pu, va_degree, p_from_mw, q_from_mvar]
-target: [res_bus]
-target_attribute: [vm_pu]
+
 # episode
 max_step: 4
 
@@ -45,21 +45,24 @@ schedule_timesteps: 10000
 final_p: 0.1
 
 # learning rate
-learning_rate: 0.005
-step_optimizer: True
-step_size: 5000
-# learning rate衰减率
-gamma_lr: 0.5
+optim_type: RMSprop
+learning_rate: 0.01
+step_optimizer: False
+step_size: 10000
+# learning rate decay
+gamma_lr: 0.1
 
 # Hyper parameter
 # network
 num_layer: 3
 layer_size: [128, 64, 32]
+use_batchnorm: True
 # Deep learning training
 batch_size: 32
-# next Q衰减率
+# next Q decay
 gamma: 0.99
 alpha: 0.95
 eps: 0.01
+dropout: 0
 
 

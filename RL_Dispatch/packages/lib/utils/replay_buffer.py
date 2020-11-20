@@ -17,22 +17,7 @@ def sample_n_unique(sampling_f, n):
 
 class ReplayBuffer(object):
     def __init__(self, size, num_actor, num_action, num_observation):
-        """This is a memory efficient implementation of the replay buffer.
-
-        The sepecific memory optimizations use here are:
-            - only store each frame once rather than k times
-              even if every observation normally consists of k last frames
-            - store frames as np.uint8 (actually it is most time-performance
-              to cast them back to float32 on GPU to minimize memory transfer
-              time)
-            - store frame_t and frame_(t+1) in the same buffer.
-
-        Parameters
-        ----------
-        size: int
-            Max number of transitions to store in the buffer. When the buffer
-            overflows the old memories are dropped.
-        """
+        """This is a memory efficient implementation of the replay buffer."""
         self.size = size
         self.num_actor = num_actor
         self.num_action = num_action
@@ -74,9 +59,6 @@ class ReplayBuffer(object):
         return self._encode_sample(idxes)
 
     def store_obs(self, input_obs):
-        """Store a single observation in the buffer at the next available index, overwriting
-        old frames if necessary."""
-
         if self.obs is None:
             self.obs      = np.zeros([self.size, self.num_observation], dtype=np.float32)
             self.action   = np.zeros([self.size, self.num_actor, self.num_action], dtype=np.int32)
@@ -88,7 +70,6 @@ class ReplayBuffer(object):
         ret = self.next_idx
         self.next_idx = (self.next_idx + 1) % self.size
         self.num_in_buffer = min(self.size, self.num_in_buffer + 1)
-
         return ret
 
     def store_result(self, idx, action, reward, done):
