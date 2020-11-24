@@ -3,7 +3,7 @@
 res/
 material/
 /RL_Dispatch/__pycache__/
-/RL_Dispatch/packages/data
+/RL_Dispatch/packages/data/
 /thought.docx
 /thought.pptx
 /planning.png
