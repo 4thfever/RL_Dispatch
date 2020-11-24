@@ -3,9 +3,13 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class DQN(nn.Module):
-    def __init__(self, in_channels, num_actions, num_actor, num_layer, layer_size, use_batchnorm, dropout=0.1):
+    def __init__(self, in_channels, num_action, num_actor, num_layer, layer_size, use_batchnorm, dropout=0.1):
         assert num_layer == len(layer_size), "num_layer not equals to length of layer size"
         super(DQN, self).__init__()
+
+        self.num_actor = num_actor
+        self.num_action = num_action
+
         # 首先过batch norm层
         self.num_layer = num_layer
         self.use_batchnorm = use_batchnorm
@@ -23,7 +27,8 @@ class DQN(nn.Module):
             self.fcs.append(nn.Linear(layer_size[i], layer_size[i+1]))
             self.dps.append(nn.Dropout(p=dropout))
         # 结果层，输出q值
-        self.fcs_end = nn.ModuleList([nn.Linear(layer_size[-1], num_actions) for _ in range(num_actor)])
+        self.m = nn.Softmax(dim=2)
+        self.fc_end = nn.Linear(layer_size[-1], num_action * num_actor)
 
 
     def forward(self, x):
@@ -33,8 +38,6 @@ class DQN(nn.Module):
             x = self.bn(x)
         for i in range(self.num_layer):
             x = self.dps[i](F.relu(self.fcs[i](x)))
-        print(x.shape)
-        l_y = [torch.unsqueeze(F.relu(fc_end(x)), dim) for fc_end in self.fcs_end]
-        print(l_y[0].shape, len(l_y))
-        print(torch.cat(l_y, dim).shape)
-        return torch.cat(l_y, dim)
+        x = self.fc_end(x).view(-1, self.num_actor, self.num_action)
+        res = self.m(x)
+        return res

@@ -1,6 +1,8 @@
 ﻿ref/
 
+material/
 /RL_Dispatch/__pycache__/
 /thought.docx
+/thought.pptx
 /planning.png
 *.pyc

@@ -8,8 +8,17 @@ fluc_area: [[0.8, 1.2]]
 # problem formulation
 target: [res_bus]
 target_attribute: [vm_pu]
-reward_border: [0.93, 0.96, 1.04, 1.07]
-reward_value: [-1, 0.5, 1]
+reward_border: [
+                [0.85,0.9], 
+                [0.9, 0.93], 
+                [0.93,0.96], 
+                [0.96,1.04], 
+                [1.04,1.07],
+                [1.07,1.1],
+                [1.1,1.15],
+              ]
+reward_list: [0.25, 0.5, 0.75, 1, 0.75, 0.5, 0.25]
+reward_worst: -1
 diverge_border: [0.4, 2]
 
 # experiment

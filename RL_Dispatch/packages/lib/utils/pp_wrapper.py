@@ -10,7 +10,9 @@ from pandapower import plotting
 
 class Wrapper():
     def __init__(self, d):
-        self.rb = d["reward_border"]
+        self.reward_border = np.array(d["reward_border"])
+        self.reward_list = d["reward_list"]
+        self.reward_worst = d["reward_worst"]
         self.db = d["diverge_border"]
         self.actor = d["actor"]
         self.action_enum = d["action_enum"]
@@ -20,7 +22,6 @@ class Wrapper():
         self.target = d["target"]
         self.target_attribute = d["target_attribute"]
         self.max_step = d["max_step"]
-        self.reward_value = d["reward_value"]
         self.folder = d["data_folder"]
 
         self.net = None
@@ -58,6 +59,8 @@ class Wrapper():
         self.step = 0
         self.run_network()
 
+    # 算reward
+    # 为了加速，全都用的矩阵操作
     def calcu_reward(self, target):
         '''
         根据观察量计算reward
@@ -65,16 +68,19 @@ class Wrapper():
         若有一个bus在最坏区间，那么reward就是最差
         输入的应当是标幺值
         '''
-        rew_bad, rew_normal, rew_best = self.reward_value
-        reward = rew_best
-        for ele in target:
-            if ele < self.rb[0] or ele > self.rb[-1]:
-                reward = rew_bad
-                break
-            if (((ele > self.rb[0]) and (ele < self.rb[1])) or 
-                ((ele < self.rb[-1]) and (ele > self.rb[-2]))):
-                reward = rew_normal
-                break
+        mat_target = np.tile(target,(len(self.reward_list),1))
+        mat_reward_bottom = np.tile(self.reward_border[:,0],(len(target),1)).T
+        mat_reward_top = np.tile(self.reward_border[:,1],(len(target),1)).T
+        check_bottom = (mat_target - mat_reward_bottom) >= 0
+        # 避免重复，这里只用>
+        check_top = (mat_reward_top - mat_target) > 0
+        check = np.logical_and(check_bottom, check_top)
+        if np.sum(check) != len(target):
+            reward = self.reward_worst
+        else:
+            reward = np.where(check==1)[0]
+            # 由于奇妙bug，需要多做一次np.array
+            reward = np.min(np.array(self.reward_list)[reward])
         return reward
 
     def extract(self, object_):
@@ -109,7 +115,7 @@ class Wrapper():
         已经最优化或者崩溃了
         '''
         rew = (self.calcu_reward(tar))
-        done_mask = (rew == self.reward_value[-1] or 
+        done_mask = (rew == max(self.reward_list) or 
                     self.is_diverged or 
                     self.exceed_max_step())
         return done_mask
