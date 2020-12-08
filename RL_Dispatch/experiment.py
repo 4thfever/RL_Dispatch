@@ -45,7 +45,7 @@ list_modification = [
     ]
 
 def main():
-    times_per_config = 5
+    times_per_config = 2
     with open('config.yaml') as file:
         d = yaml.load(file)
 

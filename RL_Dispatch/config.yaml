@@ -1,29 +1,19 @@
 # case generation
+# base_grid: "packages/grid/118nodes/118nodes.json"
 base_grid: "packages/grid/14nodes/14nodes.json"
-num_case: 500
+num_train_case: 400
+num_test_case: 100
 obj2change: ["load"]
 attr2change: ["p_mw"]
-fluc_area: [[0.8, 1.2]]
+# fluc_area: [[[0.6, 0.8],[1.2, 1.4]]]
+fluc_area: [[[0.6, 1.1],[0.6, 1.1]]]
 
-# problem formulation
-target: [res_bus]
-target_attribute: [vm_pu]
-reward_border: [
-                [0.85,0.9], 
-                [0.9, 0.93], 
-                [0.93,0.96], 
-                [0.96,1.04], 
-                [1.04,1.07],
-                [1.07,1.1],
-                [1.1,1.15],
-              ]
-reward_list: [0.25, 0.5, 0.75, 1, 0.75, 0.5, 0.25]
-reward_worst: -1
-diverge_border: [0.4, 2]
 
 # experiment
-total_step: 10000
-data_folder: "packages/data/14nodes"
+total_step: 2000
+# data_folder: "packages/data/118nodes"
+train_folder: "packages/data/14nodes_train"
+# test_folder: "packages/data/14nodes_test"
 # replay_buffer_size: 1000000
 replay_buffer_size: 10000
 # learning_starts: 50000
@@ -32,12 +22,32 @@ learning_freq: 4
 target_update_freq: 500
 # log
 log_every_n_steps: 500
+do_test: False
+
+
+# problem formulation
+target: ["res_bus"]
+target_attribute: ["vm_pu"]
+# reward_border: [
+#                 [0.9, 0.95], 
+#                 [0.95, 1.05], 
+#                 [1.05, 1.1], 
+#               ]
+reward_border: [
+                [0.9, 0.97], 
+                [0.97, 1.03], 
+                [1.03, 1.1], 
+              ]
+# reward_list: [-0.5, 0.5, 1, 0.5, -0.5]
+reward_list: [-0.5, 1, -0.5]
+reward_worst: -1
+diverge_border: [0.4, 2]
 
 
 # action
-num_actor: 4
-actor: gen
-action_attribute: vm_pu
+# num_actor: 4
+actor: ["gen"]
+action_attribute: ["vm_pu"]
 action_enum: [0.95, 0.975, 1, 1.025, 1.05]
 
 # observation
@@ -45,13 +55,15 @@ observer: [res_bus, res_bus, res_line, res_line]
 observe_attribute: [vm_pu, va_degree, p_from_mw, q_from_mvar]
 
 # episode
-max_step: 4
+max_step: 5
 
 
 # schedule
 schedule_type: linear
-schedule_timesteps: 10000
-final_p: 0.1
+schedule_timesteps: 1000
+# schedule_timesteps: 1
+final_p: 0.01
+# final_p: 0
 
 # learning rate
 optim_type: RMSprop
@@ -72,6 +84,4 @@ batch_size: 32
 gamma: 0.99
 alpha: 0.95
 eps: 0.01
-dropout: 0
-
-
+dropout: 0.1

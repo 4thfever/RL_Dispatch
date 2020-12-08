@@ -17,17 +17,12 @@ from .schedule import LinearSchedule
 from .replay_buffer import ReplayBuffer
 
 class Env():
-    def __init__(self, d):
+    def __init__(self, d, case):
         """
         和强化学习程序交互的接口
         """
-        
-        # self.total_step = d["total_step"]
-        # self.data_folder = d["data_folder"]
-        # self.num_actor = d["num_actor"]
-        # self.action_enum = d["action_enum"]
-        # self.log_every_n_steps = d["log_every_n_steps"]
         self.d = d
+        self.case = case
 
         self.count_network = 0
         self.num_step = 0
@@ -35,18 +30,20 @@ class Env():
         self.stop_expr = False
 
         # pandapower wrapper
-        self.wrapper = Wrapper(d)
+        self.wrapper = Wrapper(d, case)
         self.num_observation = self.wrapper.num_observation
 
         # network
         self.num_total_network = self.wrapper.count_network_num()
         self.idxs_network = np.random.permutation(self.num_total_network)
         self.wrapper.load_network(self.idxs_network[self.count_network])
+        self.num_actor = self.wrapper.count_actor()
 
     def step(self, action):
         """
         执行下一步调度过程，并输出各项信息
         """
+        # print(self.wrapper.extract('tar'))
         obs = self.wrapper.extract('obs')
         action = self.wrapper.trans_action(action)
         self.wrapper.input_action(action)
@@ -57,6 +54,8 @@ class Env():
         reward = self.wrapper.calcu_reward(tar)
         done = self.wrapper.is_done(tar)
         self.wrapper.step += 1
+        # print(self.wrapper.extract('tar'))
+        # print(reward)
         return obs, reward, done
 
     def initial_run(self):
@@ -80,8 +79,12 @@ class Env():
         """
         整个实验停止的指标
         """
-        if self.num_step >= self.d["total_step"]:
-            self.stop_expr = True
+        if self.case == "train":
+            if self.num_step >= self.d["total_step"]:
+                self.stop_expr = True
+        elif self.case == "test":
+            if self.num_episode >= self.num_total_network:
+                self.stop_expr = True
         return self.stop_expr
 
 
@@ -122,7 +125,7 @@ class Env():
                 model.train()
             action_buffer = self.onehot_encode(output, len(self.d["action_enum"]))
         else:
-            action_buffer = self.rand_action(self.d["num_actor"], len(self.d["action_enum"]))
+            action_buffer = self.rand_action(self.num_actor, len(self.d["action_enum"]))
         return action_buffer
 
     def create_explor_schedule(self):
@@ -140,11 +143,10 @@ class Env():
                               eps=self.d["eps"],
                               )
         elif self.d["optim_type"] == "Adam":
-            ptimizer = optim.Adam(params,
+            optimizer = optim.Adam(params,
                                   lr=self.d["learning_rate"], 
                                   eps=self.d["eps"],
                                  )
-            # optimizer = 
         return optimizer
 
     # 负责learning rate的变化
@@ -167,7 +169,7 @@ class Env():
         # Construct the replay buffer
         return ReplayBuffer(
                             self.d["replay_buffer_size"], 
-                            self.d["num_actor"],
+                            self.num_actor,
                             len(self.d["action_enum"]),
                             self.num_observation,
                             )

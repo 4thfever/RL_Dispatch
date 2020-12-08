@@ -13,8 +13,11 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.autograd as autograd
+import matplotlib
 import matplotlib.pyplot as plt
 
+import warnings
+warnings.filterwarnings("ignore", category=matplotlib.cbook.mplDeprecation)
 
 from .lib.utils.env import Env
 from .dqn_model import DQN
@@ -32,7 +35,7 @@ def dqn_learing(d, output_path=None, save_or_plot="plot"):
     learning_starts = d["learning_starts"]
     learning_freq = d["learning_freq"]
     target_update_freq = d["target_update_freq"]
-    num_actor = d["num_actor"]
+    # num_actor = d["num_actor"]
     action_enum = d["action_enum"]
     num_layer = d["num_layer"]
     layer_size = d["layer_size"]
@@ -40,8 +43,30 @@ def dqn_learing(d, output_path=None, save_or_plot="plot"):
     log_every_n_steps = d["log_every_n_steps"]
     ub = d["use_batchnorm"]
     dropout = d["dropout"]
+    total_step = d["total_step"]
 
-    env = Env(d)
+    env = Env(d, "train")
+    num_actor = env.num_actor
+
+    print("Start Training")
+    print(f"grid bus size: {env.wrapper.net['bus'].shape[0]}")
+    print(f"grid line size: {env.wrapper.net['line'].shape[0]}")
+    print("")
+    print(f"device : {device}")
+    print(f"num_sample: {env.num_total_network}")
+    print(f"total_step: {total_step}")
+    print(f"learning_starts  {learning_starts}")
+    print(f"log_every_n_steps: {log_every_n_steps}")
+    print(f"target_update_freq: {target_update_freq}")
+    print("")
+    print(f"actor: {d['actor']}")
+    print(f"action attribute: {d['action_attribute']}")
+    print(f"observer: {d['observer']}")
+    print(f"observe attribute: {d['observe_attribute']}")
+    print(f"target: {d['target']}")
+    print(f"target attribute: {d['target_attribute']}")
+    print("\n")
+
 
     # Initialize target q function and q function
     Q = DQN(env.num_observation, len(action_enum), num_actor, num_layer, layer_size, ub, dropout).to(device)
@@ -70,7 +95,6 @@ def dqn_learing(d, output_path=None, save_or_plot="plot"):
         env.num_step = t
         if env.stopping_criterion():
             break
-
 
         # 初始化batch norm
         # 这个是因为batch norm刚开始是不知道mean和var的
@@ -124,25 +148,20 @@ def dqn_learing(d, output_path=None, save_or_plot="plot"):
             # Compute the target of the current Q values
             rew_batch = rew_batch.unsqueeze(1)
             # 拼接reward让其可以对应二维输出
-            rew_batch_resize = torch.cat((rew_batch, rew_batch, rew_batch, rew_batch), 1)
+            rew_batch_resize = torch.cat(tuple(rew_batch for _ in range(num_actor)), 1)
+            # rew_batch_resize = torch.cat((rew_batch, rew_batch, rew_batch, rew_batch), 1)
             target_Q_values = rew_batch_resize + (gamma * next_Q_values)             # Compute Bellman error
             bellman_error = target_Q_values - current_Q_values.squeeze()
             # clip the bellman error between [-1 , 1]
+            # 其实这里是不需要的，不过留着吧
             clipped_bellman_error = bellman_error.clamp(-1, 1)
-            # Note: clipped_bellman_delta * -1 will be right gradient
             d_error = clipped_bellman_error * -1.0
-            # Clear previous gradients before backward pass
             optimizer.zero_grad()
-            # run backward pass
             current_Q_values.backward(d_error.unsqueeze(2).data)
-
-            # Perfom the update
             optimizer.step()
 
-            # Periodically update the target network by Q network to target Q network
             if t % target_update_freq == 0:
                 target_Q.load_state_dict(Q.state_dict())
-
 
         ### 4. Log progress and keep track of statistics
         # 初始化log info
@@ -151,7 +170,7 @@ def dqn_learing(d, output_path=None, save_or_plot="plot"):
 
         df_res.loc[t, :] = [t, env.num_episode, reward, explor_value]
 
-        if t % log_every_n_steps == 0:
+        if (t + 1) % log_every_n_steps == 0:
             time_used = time.time() - time_point
             time_point = time.time()
             lr = optimizer.param_groups[0]['lr']
@@ -159,15 +178,34 @@ def dqn_learing(d, output_path=None, save_or_plot="plot"):
             print(f"Timestep: {t}")
             print(f"Episodes: {env.num_episode}")
             print(f"Time Consumption: {time_used:.2f} s")
-            print(env.wrapper.extract('tar'))
+            mean_steps_episode, mean_reward_episode = env.cal_epi_reward(df_res, env.num_episode)
+            best_mean_reward = max(best_mean_reward, mean_reward_episode)
+            print(f"Mean Reward ({log_every_n_steps} episodes): {mean_reward_episode:.2f}")
+            print(f"Best Mean Reward: {best_mean_reward:.2f}")
             if t > learning_starts:
-                mean_steps_episode, mean_reward_episode = env.cal_epi_reward(df_res, env.num_episode)
-                best_mean_reward = max(best_mean_reward, mean_reward_episode)
-                print(f"Mean Reward ({log_every_n_steps} episodes): {mean_reward_episode:.2f}")
-                print(f"Best Mean Reward: {best_mean_reward:.2f}")
                 print(f"Exploration: {explor_value:.2f}")
                 print(f"Learning Rate: {lr}")
+                print("")
+                # 过一遍测试集，看accu
+                if d["do_test"]:
+                    env_test = Env(d, "test")
+                    Q.eval()
+                    buf_reward, buf_step = 0, 0
+                    last_obs = env_test.initial_run()
+                    for t_test in count():
+                        env_test.num_step = t_test
+                        if env_test.stopping_criterion():
+                            break
+                        action = env_test.select_epilson_greedy_action(Q, last_obs, 0, device)
+                        last_obs, reward, done = env_test.step(action)
+                        if done == True:
+                            last_obs = env_test.reset()
+                            buf_reward += reward
+                    Q.train()
+                    print(f"Test Scord: {buf_reward/d['num_test_case']}")
             print("\n")
+
+
 
     # 结束
     print("Learning Finished")
@@ -185,3 +223,6 @@ def dqn_learing(d, output_path=None, save_or_plot="plot"):
     elif save_or_plot == "save":
         plt.savefig(png_name)
         plt.clf()
+
+    print([env.wrapper.net[ele][attr] for ele, attr in zip(d['actor'], d['action_attribute'])])
+    print([env.wrapper.net[ele][attr] for ele, attr in zip(d['target'], d['target_attribute'])])

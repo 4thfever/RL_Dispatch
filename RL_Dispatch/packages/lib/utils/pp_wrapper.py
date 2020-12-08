@@ -9,7 +9,7 @@ from pandapower import plotting
 
 
 class Wrapper():
-    def __init__(self, d):
+    def __init__(self, d, case):
         self.reward_border = np.array(d["reward_border"])
         self.reward_list = d["reward_list"]
         self.reward_worst = d["reward_worst"]
@@ -22,11 +22,14 @@ class Wrapper():
         self.target = d["target"]
         self.target_attribute = d["target_attribute"]
         self.max_step = d["max_step"]
-        self.folder = d["data_folder"]
+        if case == "train":
+            self.folder = d["train_folder"]
+        if case == "test":
+            self.folder = d["test_folder"]
 
         self.net = None
         self.is_diverged = False
-        self.step = 0
+        self.step = 1
         self.num_observation, self.num_target = self.count_obs_tar()
 
     # 这里计数的前提是不同的case都是同一个网络结构
@@ -38,6 +41,12 @@ class Wrapper():
         num_tar = sum([net_buffer[ele].shape[0] for ele in self.target])
         return num_obs, num_tar
 
+    def count_actor(self):
+        net_buffer = pp.from_json(self.folder + '/' + os.listdir(self.folder)[0])
+        pp.runpp(net_buffer)
+        num_actor = sum([net_buffer[ele].shape[0] for ele in self.actor])
+        return num_actor
+
         
     def count_network_num(self):
         total_network_num = len(os.listdir(self.folder))
@@ -47,16 +56,9 @@ class Wrapper():
     def load_network(self, num):
         self.net = pp.from_json(self.folder + '/' + os.listdir(self.folder)[num])
 
-        # self.net['bus']['max_vm_pu'] = np.nan
-        # self.net['bus']['min_vm_pu'] = np.nan
-        # self.net['bus']['type'] = 'n'
-        # self.net['load']['p_mw'][3] = 200
-        # self.net['load']['q_mvar'][3] = 200
-        self.net['ext_grid']['in_service'] = False
-        self.net['gen']['slack'][0] = True
-
         self.is_diverged = False
-        self.step = 0
+        # 从1开始方便计算
+        self.step = 1
         self.run_network()
 
     # 算reward
@@ -107,7 +109,10 @@ class Wrapper():
 
     def input_action(self, action):
         # 给network输入action
-        self.net[self.actor][self.action_attribute] = action
+        # 加一层list是因为要适应之后的循环
+        action = [action]
+        for ele, attr, act_ in zip(self.actor, self.action_attribute, action):
+            self.net[ele][attr] = act_
 
     def is_done(self, tar):
         '''
